@@ -57,37 +57,19 @@ Add a file ──► encrypted + split into N fragments ──► stored in vaul
 
 ## How the cryptography works
 
-A naive approach would run Shamir's Secret Sharing over every byte of the
-file. That works, but it makes **each fragment as large as the whole
-file** — ten fragments of a 50 MB file would be 500 MB. SecureVault uses
-the standard **hybrid scheme** instead:
-
 1. **Encrypt the file.** A random 256-bit key is generated and the entire
-   file is encrypted once with **AES-256-GCM**. GCM also produces an
-   authentication tag, so tampering is detected on decryption.
+   file is encrypted once with **AES-256-GCM**. 
 
 2. **Split only the key.** The small 32-byte AES key is the secret that
-   gets **Shamir-split** into `N` shares. Each share is tiny.
+   gets **Shamir-split** into `N` shares.
 
 3. **Optional password layer.** If the user sets a password, the AES key
-   is itself encrypted (with a key derived from the password via
-   **PBKDF2-HMAC-SHA256**) *before* being split. Now even someone holding
-   `K` fragments cannot rebuild the file without the password.
+   is itself encrypted *before* being split.
 
-4. **Package fragments.** Each `.svf` fragment file carries one key share,
-   a copy of the ciphertext, and the metadata (`N`, `K`, nonce, salt,
-   SHA-256 checksum). Any `K` fragments rebuild the file; any `K-1`
+4. **Package fragments.** Each fragment is formatted to `.svf`. Any `K` fragments rebuild the file; any `K-1`
    reveal nothing.
 
-Reconstruction reverses this: combine `K` shares to recover the key,
-unwrap it with the password if needed, decrypt the ciphertext, and verify
-the SHA-256 checksum.
-
-### Why Shamir needs a "finite field"
-
-Polynomial maths only stays exact (no rounding) inside a finite field.
-SecureVault uses **GF(2^8)** — the same field AES uses — so every value
-fits in a single byte. See `src-tauri/src/core/gf256.rs`.
+Reconstruction reverses this.
 
 ---
 
@@ -146,20 +128,80 @@ frontend and `core`.
 
 ## Prerequisites
 
-To build and run on **Windows** you need:
+Both `npm install` and `npm run tauri dev` require **Rust** to be installed.
+`npm install` only downloads JavaScript packages and will succeed on its own,
+but `npm run tauri dev` compiles the entire Rust backend using `cargo` — so
+without Rust installed it will fail immediately.
 
-| Tool | Why | Where |
-|------|-----|-------|
-| **Rust** (stable, 1.77+) | the backend | <https://rustup.rs> |
-| **Node.js** (18+) | frontend tooling | <https://nodejs.org> |
-| **Microsoft C++ Build Tools** | Rust links against MSVC | "Desktop development with C++" workload in the Visual Studio Installer |
-| **WebView2 runtime** | Tauri's webview | pre-installed on Windows 10/11; otherwise from Microsoft |
+### 1. Install Rust
 
-For Docker-based development you only need **Docker Desktop**.
+Download and run the installer from <https://rustup.rs>. This installs
+`rustc` (the compiler) and `cargo` (the package manager). Choose the
+default options when prompted.
+
+After installation, **restart your terminal** so that `cargo` is available
+on your PATH. Verify with:
+
+```powershell
+rustc --version
+cargo --version
+```
+
+### 2. Install Microsoft C++ Build Tools
+
+Rust on Windows compiles native code using MSVC. You need the
+**"Desktop development with C++"** workload from the Visual Studio
+Installer:
+
+<https://visualstudio.microsoft.com/visual-cpp-build-tools/>
+
+Download the Build Tools installer, run it, tick "Desktop development
+with C++", and install. This can take a few minutes.
+
+### 3. Install Node.js
+
+Download and install Node.js (version 18 or later) from
+<https://nodejs.org>. The LTS version is recommended. Verify with:
+
+```powershell
+rustup update
+rustc --version
+
+node --version
+npm --version
+```
+
+### 4. WebView2 Runtime
+
+Tauri uses the system WebView2 runtime to render the frontend. This is
+**pre-installed on Windows 10 and 11**, so you most likely already have it.
+If not, download it from Microsoft:
+<https://developer.microsoft.com/en-us/microsoft-edge/webview2/>
+
+### 5. Docker (optional)
+
+For Docker-based development and testing you need **Docker Desktop**.
+This is not required to build or run the app — it is only used for
+running the test suite and linter in a container.
+
+### Troubleshooting: PowerShell execution policy
+
+If PowerShell blocks scripts with an error like
+*"running scripts is disabled on this system"*, you need to allow script
+execution. Open PowerShell and run:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+You only need to do this once.
 
 ---
 
-## Running the app (Windows)
+## Running the app (Windows Live Testing)
+
+Make sure Rust, Node.js, and the C++ Build Tools are all installed
+(see [Prerequisites](#prerequisites) above) before continuing.
 
 ```powershell
 # 1. Install frontend dependencies (one time)
@@ -175,9 +217,7 @@ for the frontend, and opens the SecureVault window.
 The first compile downloads and builds every Rust dependency, so it can
 take several minutes. Later builds are fast.
 
----
-
-## Building a Windows installer
+## Building a Windows installer(Optional)
 
 ```powershell
 npm run tauri build
@@ -190,46 +230,6 @@ This produces, under `src-tauri/target/release/bundle/`:
 
 Either one installs SecureVault as a normal Windows application.
 
-> The placeholder icons in `src-tauri/icons/` are plain coloured squares.
-> Replace them with a real icon at any time:
-> `npm run tauri icon path\to\your-icon.png`
-
----
-
-## Development and testing with Docker
-
-A Tauri app draws a **graphical window**, and GUI apps do not run well
-inside a plain container. So Docker here is used for what it is good at:
-**compiling the backend and running the test suite** in a reproducible
-environment. The actual Windows app is still built natively on Windows.
-
-All commands are run from the project root.
-
-```bash
-# Run the Rust unit tests (crypto, Shamir, storage, sharing)
-docker compose -f docker/docker-compose.yml run --rm test
-
-# Open an interactive shell inside the build environment
-docker compose -f docker/docker-compose.yml run --rm dev
-
-# Check formatting and run the clippy linter
-docker compose -f docker/docker-compose.yml run --rm lint
-```
-
-The compose file defines named volumes that cache Cargo's downloaded
-crates, so repeated runs are fast.
-
-### Running the tests natively instead
-
-If you have Rust installed you do not need Docker for tests:
-
-```bash
-cargo test --manifest-path src-tauri/Cargo.toml
-```
-
-Every module in `core/` ships with unit tests — for example
-`shamir.rs` verifies that any `K` of `N` shares reconstruct the secret
-and that `K-1` do not.
 
 ---
 
@@ -248,53 +248,3 @@ registered commands (see `src-tauri/src/lib.rs`):
 | `inspect_shared_file` | Read a share `.zip`'s details without importing. |
 | `import_shared_file` | Rebuild a shared file and store it in the vault. |
 
-Example call from `main.js`:
-
-```js
-import { invoke } from "@tauri-apps/api/core";
-
-const result = await invoke("split_and_store", {
-  request: {
-    filePath: "C:/Users/me/secret.pdf",
-    totalFragments: 5,
-    threshold: 3,
-    password: null,
-  },
-});
-```
-
----
-
-## Security notes and limitations
-
-This is a **learning project**. It implements the cryptography correctly,
-but a few honest caveats:
-
-* **The "secret folder" cannot be made truly unopenable.** Any folder on
-  the user's own machine is reachable by the OS file explorer. SecureVault
-  instead **encrypts every file it writes into the vault** (encryption at
-  rest) using a machine-local app secret. The user can *locate* the
-  folder, but the `.enc` files are unreadable noise without the app. This
-  is the honest, real-world way to protect local data.
-
-* **The machine-local app secret** lives in the app-data directory. It
-  protects against casual inspection, not against an attacker with full
-  control of the machine — that is a fundamentally hard problem and out of
-  scope here.
-
-* **Whole files are held in memory** during split/reconstruct. This is
-  fine for documents and images; very large files (multi-GB) would need a
-  streaming redesign.
-
-* **The crypto crates** (`aes-gcm`, `pbkdf2`, `sha2`, `rand`) are
-  well-regarded open-source implementations from the Rust Crypto project,
-  but this project has not had a professional security audit.
-
-For a classroom assignment these trade-offs are reasonable and are
-documented here so they are visible rather than hidden.
-
----
-
-## Licence
-
-Provided as-is for educational purposes.
