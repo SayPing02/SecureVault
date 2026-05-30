@@ -140,9 +140,10 @@ Download and run the installer from <https://rustup.rs>. This installs
 default options when prompted.
 
 After installation, **restart your terminal** so that `cargo` is available
-on your PATH. Verify with:
+on your PATH and update Rust. Verify with:
 
 ```powershell
+rustup update
 rustc --version
 cargo --version
 ```
@@ -164,8 +165,6 @@ Download and install Node.js (version 18 or later) from
 <https://nodejs.org>. The LTS version is recommended. Verify with:
 
 ```powershell
-rustup update
-rustc --version
 
 node --version
 npm --version
