@@ -1,0 +1,45 @@
+# docker compose -f docker/docker-compose.yml run --rm test
+# docker compose -f docker/docker-compose.yml run --rm dev
+# docker compose -f docker/docker-compose.yml run --rm lint
+
+services:
+  test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: securevault-dev
+    volumes:
+      - ..:/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/app/src-tauri/target
+    command: cargo test --manifest-path src-tauri/Cargo.toml
+
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: securevault-dev
+    volumes:
+      - ..:/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/app/src-tauri/target
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  lint:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: securevault-dev
+    volumes:
+      - ..:/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/app/src-tauri/target
+    command: >
+      bash -c "cargo fmt --manifest-path src-tauri/Cargo.toml --check &&
+               cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings"
+
+volumes:
+  cargo-cache:
+  target-cache:

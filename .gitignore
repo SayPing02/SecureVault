@@ -1,0 +1,20 @@
+# --- IDE ---
+.vs/
+.idea/
+.vscode/
+
+# --- Rust ---
+/src-tauri/target/
+/dist/
+
+# --- Node / frontend ---
+node_modules/
+.vite/
+
+# --- Tauri generated files ---
+/src-tauri/gen/
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+*.swp
