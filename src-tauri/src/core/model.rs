@@ -17,12 +17,12 @@ pub struct Fragment {
     pub original_filename: String,
     pub original_size: u64,
     pub password_protected: bool,
-    pub salt_b64: String,  // PBKDF2 salt, only used if password_protected
+    pub salt_b64: String,  // PBKDF2 salt, only if password protected
     pub share_x: u8,
     pub share_y_b64: String,
     pub nonce_b64: String,
     pub checksum: String, // sha256 of the original file
-    pub ciphertext_b64: String, // the entire encrypted file (yes, every fragment has a copy)
+    pub ciphertext_b64: String, // the entire encrypted file
 }
 
 // What the user picks on the split screen

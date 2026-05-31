@@ -36,7 +36,7 @@ pub fn split(secret: &[u8], n: u8, k: u8) -> CoreResult<Vec<Share>> {
         .collect();
 
     // for each byte of the secret, create a random polynomial
-    // with that byte as the constant term, then evaluate at each x
+    // with that byte as the constant term, evaluate at each x
     for (byte_idx, &secret_byte) in secret.iter().enumerate() {
         let mut coeffs = vec![0u8; k as usize];
         coeffs[0] = secret_byte;

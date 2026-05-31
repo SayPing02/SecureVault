@@ -1,7 +1,6 @@
 // AES-256-GCM encryption and key derivation
 // GCM gives us both encryption AND integrity checking - if someone
-// tampers with the ciphertext or uses the wrong key, decryption will
-// fail with an error instead of giving back garbage data.
+// tampers with the ciphertext or uses the wrong key, decryption will fail with an error.
 
 use crate::core::error::{CoreError, CoreResult};
 use aes_gcm::aead::{Aead, KeyInit};
@@ -34,7 +33,6 @@ pub fn generate_salt() -> [u8; SALT_LEN] {
 }
 
 // derive a key from a password using PBKDF2
-// this makes brute-force attacks slow since each guess costs 100k iterations
 pub fn derive_key_from_password(password: &str, salt: &[u8]) -> [u8; KEY_LEN] {
     let mut key = [0u8; KEY_LEN];
     pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);

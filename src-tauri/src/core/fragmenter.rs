@@ -1,7 +1,7 @@
 // This is the main module that ties crypto + shamir together
 // It handles splitting a file into fragments and reconstructing it back
 //
-// How splitting works:
+// Splitting steps
 // 1. generate random AES key
 // 2. if user set a password, wrap the key with password-derived encryption
 // 3. encrypt the file with the AES key
@@ -43,9 +43,7 @@ pub fn split_file(
     let file_key = crypto::generate_key();
     let encrypted_file = crypto::encrypt(&file_key, file_bytes)?;
 
-    // step 2: optionally wrap the key behind a password
-    // if password protected, we encrypt the AES key AGAIN with a password-derived key
-    // so even having k fragments isnt enough without the password
+    // step 2: optionally wrap the key behind a password, will need fragments and password
     let salt = crypto::generate_salt();
     let (key_to_share, salt_b64): (Vec<u8>, String) = match password {
         Some(pw) => {
@@ -112,7 +110,7 @@ pub fn reconstruct_file(
         ));
     }
 
-    // step 1: combine shamir shares to get the key back
+    // step 1: combine shamir shares to get back key
     let mut shares = Vec::new();
     for frag in fragments.iter().take(first.threshold as usize) {
         let y = B64.decode(&frag.share_y_b64)
@@ -167,7 +165,7 @@ pub fn reconstruct_file(
     Ok(plaintext)
 }
 
-// helper to convert a Vec<u8> into a fixed-size key array
+// convert Vec<u8> into a fixed-size key array
 fn to_key_array(bytes: &[u8]) -> CoreResult<[u8; crypto::KEY_LEN]> {
     if bytes.len() != crypto::KEY_LEN {
         return Err(CoreError::InvalidFragment(format!(

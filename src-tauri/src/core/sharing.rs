@@ -12,7 +12,7 @@ use std::io::{Cursor, Read, Write};
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
 
-// Build a zip in memory with the minimum number of fragments
+// Build a zip in memory with minimum fragments
 pub fn package_for_sharing(fragments: &[Fragment]) -> CoreResult<Vec<u8>> {
     let first = fragments
         .first()

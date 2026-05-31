@@ -1,17 +1,9 @@
 // Vault storage layer
 //
 // Handles reading/writing fragment files and the manifest to disk.
-// Everything written to the vault folder is encrypted with a key derived
-// from a machine-local secret (app.secret file). This way even if someone
-// finds the folder, the files look like random noise.
+// Everything written to the vault folder is encrypted.
+//  Even if folder is accessed manually, the files look like random noise.
 //
-// Folder layout:
-//   <app-data>/vault/
-//     manifest.json.enc
-//     <file_id>/
-//       fragment_1.svf.enc
-//       fragment_2.svf.enc
-//       ...
 
 use crate::core::crypto;
 use crate::core::error::{CoreError, CoreResult};
