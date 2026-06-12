@@ -14,7 +14,6 @@
 <header>
   <div class="logo-icon">🔐</div>
   <div class="logo-text">Secure<span>Vault</span></div>
-  <div class="header-badge">Shamir SSS · AES-256</div>
 </header>
 
 <div class="app">
@@ -28,19 +27,18 @@
       <span class="tab-icon">✂️</span> Add File
     </button>
     <button class="tab" data-tab="import">
-      <span class="tab-icon">📥</span> Import Shared
+      <span class="tab-icon">📥</span> Reconstruct
     </button>
   </div>
 
   <!-- ════════════════════════ VAULT PANEL ════════════════════════ -->
   <div id="panel-vault" class="panel active">
     <div class="section-title">My Secure Files</div>
-    <div class="section-sub">// Files stored</div>
+    <div class="section-sub">// Files stored on your device</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
-      <span><strong>Reconstruct, Download</strong>, or
-        <strong>Share</strong> to share file with other user.</span>
+      <span>Click a file to <strong>download</strong>, <strong>Share</strong> or delete.</span>
     </div>
 
     <div class="card">
@@ -59,11 +57,10 @@
   <!-- ════════════════════════ SPLIT PANEL ════════════════════════ -->
   <div id="panel-split" class="panel">
     <div class="section-title">Add a File to the Vault</div>
-    <div class="section-sub">// Break your file into encrypted fragments</div>
+    <div class="section-sub">// Store the file into device</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
-      <span>Import a file of  <strong>any type</strong>. It will be securely stored to your configurations</span>
     </div>
 
     <!-- File Select -->
@@ -88,7 +85,7 @@
           <input type="number" id="totalShares" min="2" max="10" value="5">
         </div>
         <div>
-          <label>Minimum recovery</label>
+          <label>Minimum Threshold</label>
           <input type="number" id="threshold" min="2" max="5" value="3">
         </div>
         <!--<div>
@@ -137,35 +134,36 @@
 
   <!-- ════════════════════════ IMPORT PANEL ════════════════════════ -->
   <div id="panel-import" class="panel">
-    <div class="section-title">Import a Shared File</div>
-    <div class="section-sub">// Load and save a file shared to you</div>
+    <div class="section-title">Reconstruct from Fragments</div>
+    <div class="section-sub">// Select individual .svf fragment files to reconstruct a file</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
-      <span>Select the <strong>.zip bundle</strong> you received. Import to your storage.</span>
+      <span>Select <strong>individual fragment files</strong>.</span>
     </div>
 
     <div class="card">
-      <div class="card-title">Select Shared Bundle</div>
+      <div class="card-title">Select Fragment Files</div>
       <div class="drop-zone" id="importDropZone">
         <div id="importDropContent">
-          <div class="drop-icon">📦</div>
-          <div class="drop-text">Click to browse for a .zip bundle</div>
-          <div class="drop-sub">SecureVault share archive</div>
+          <div class="drop-icon">🧩</div>
+          <div class="drop-text">Click to browse for fragment files</div>
+          <div class="drop-sub">Select multiple .svf files</div>
         </div>
       </div>
-      <div id="importPickedFile" class="picked-file hidden"></div>
+      <div id="importPickedFiles" class="picked-file hidden"></div>
     </div>
 
     <div class="card hidden" id="importInfoCard">
-      <div class="card-title">Bundle Details</div>
+      <div class="card-title">Fragment Details</div>
       <div id="importInfo" class="slot-info filled"></div>
     </div>
 
     <div class="card">
       <div class="card-title">Operation</div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btnImport">📥 Import File</button>
+        <button class="btn btn-primary" id="btnImport">📥 Store</button>
+        <button class="btn btn-secondary" id="btnImportAddMore">+ Add More Fragments</button>
         <button class="btn btn-secondary" id="btnImportReset">↺ Reset</button>
       </div>
     </div>
@@ -173,10 +171,12 @@
     <div class="card">
       <div class="card-title">Operation Log</div>
       <div class="console" id="importConsole">
-        <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Select a shared bundle to begin.</span></div>
+        <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Select fragment files to begin.</span></div>
       </div>
     </div>
   </div>
+
+ 
 
 <!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
 <div id="passwordModal" class="modal-overlay hidden">

@@ -39,8 +39,8 @@ pub fn run() {
             commands::vault::download_vault_file,
             commands::vault::delete_vault_file,
             commands::sharing::share_vault_file,
-            commands::sharing::import_shared_file,
-            commands::sharing::inspect_shared_file,
+            commands::sharing::reconstruct_from_fragments,
+            commands::sharing::inspect_fragments,
         ])
         .run(tauri::generate_context!())
         .expect("error while running SecureVault");

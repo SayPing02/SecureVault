@@ -1,9 +1,12 @@
-// Commands for sharing files between users
-// Export: zip up k fragments and save to Downloads
-// Import: load a shared zip, reconstruct, re-fragment into our vault
+// Commands for sharing and reconstructing from individual fragments
+//
+// Share: load fragments from vault, package as opaque .svf files in a zip
+// Reconstruct: user selects individual .svf files, app decodes and reconstructs
+// The .svf files are base64-encoded so they're not human readable,
+// but they don't use any machine-specific key so they work on any machine
 
 use crate::commands::dto::OperationResult;
-use crate::core::model::{SplitParams, VaultEntry};
+use crate::core::model::{Fragment, SplitParams, VaultEntry};
 use crate::core::{fragmenter, sharing};
 use crate::state::AppState;
 use std::fs;
@@ -17,6 +20,7 @@ fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
+// Export all N fragments as opaque .svf files in a zip to Downloads
 #[tauri::command]
 pub fn share_vault_file(
     file_id: String,
@@ -24,13 +28,14 @@ pub fn share_vault_file(
 ) -> Result<OperationResult, String> {
     let storage = state.storage.lock().map_err(|_| "storage lock poisoned")?;
 
+    // load and decrypt fragments from vault (at-rest decryption)
     let fragments = storage.load_fragments(&file_id)?;
     let filename = fragments[0].original_filename.clone();
-    let threshold = fragments[0].threshold;
+    let count = fragments.len();
 
-    let zip_bytes = sharing::package_for_sharing(&fragments)?;
+    // package them as opaque .svf files (portable, no machine-specific key)
+    let zip_bytes = sharing::package_all_fragments(&fragments)?;
 
-    // save to Downloads as "filename-share.zip"
     let downloads = dirs::download_dir()
         .ok_or_else(|| "could not find Downloads".to_string())?;
     let stem = std::path::Path::new(&filename)
@@ -44,30 +49,49 @@ pub fn share_vault_file(
         .map_err(|e| format!("could not write share file: {e}"))?;
 
     Ok(OperationResult::ok(
-        format!("Share bundle for '{}' saved to Downloads ({} fragments)", filename, threshold),
+        format!("Share bundle for '{}' saved to Downloads ({} fragments)", filename, count),
         Some(out_path.to_string_lossy().to_string()),
     ))
 }
 
-// Import a shared zip: reconstruct the file, then re-fragment into our own vault with original parameters
+// Reconstruct a file from individual .svf fragment files
+// The .svf files use opaque encoding so they work from any machine
 #[tauri::command]
-pub fn import_shared_file(
-    zip_path: String,
+pub fn reconstruct_from_fragments(
+    fragment_paths: Vec<String>,
     password: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<OperationResult, String> {
-    let zip_bytes = fs::read(&zip_path)
-        .map_err(|e| format!("could not read share file: {e}"))?;
-    let incoming = sharing::import_shared_bundle(&zip_bytes)?;
+    if fragment_paths.is_empty() {
+        return Err("no fragment files selected".to_string());
+    }
 
-    let first = &incoming[0];
+    // read and decode each .svf file
+    let mut fragments = Vec::new();
+    for path_str in &fragment_paths {
+        let data = fs::read(path_str)
+            .map_err(|e| format!("could not read {}: {e}", path_str))?;
+        let frag = sharing::read_opaque_fragment(&data)?;
+        fragments.push(frag);
+    }
+
+    let first = &fragments[0];
+    let filename = first.original_filename.clone();
+    let threshold = first.threshold;
+
+    if fragments.len() < threshold as usize {
+        return Err(format!(
+            "need at least {} fragments to reconstruct '{}', but only {} selected",
+            threshold, filename, fragments.len()
+        ));
+    }
+
     let pw = password.as_deref().filter(|p| !p.is_empty());
 
     // reconstruct the original file
-    let file_bytes = fragmenter::reconstruct_file(&incoming, pw)?;
-    let filename = first.original_filename.clone();
+    let file_bytes = fragmenter::reconstruct_file(&fragments, pw)?;
 
-    // re-fragment with the same n/k/password as the original
+    // re-fragment and store in this vault
     let params = SplitParams {
         total_fragments: first.total,
         threshold: first.threshold,
@@ -76,7 +100,6 @@ pub fn import_shared_file(
     let new_frags = fragmenter::split_file(&file_bytes, &filename, &params)?;
     let new_id = new_frags[0].file_id.clone();
 
-    // store in our vault
     let storage = state.storage.lock().map_err(|_| "storage lock poisoned")?;
     storage.store_fragments(&new_id, &new_frags)?;
 
@@ -93,35 +116,50 @@ pub fn import_shared_file(
     storage.save_manifest(&manifest)?;
 
     Ok(OperationResult::ok(
-        format!("Imported '{}' into your vault", filename),
+        format!("Reconstructed '{}' and stored in vault", filename),
         None,
     ))
 }
 
-// Peek at a shared zip to see whats inside (filename, size, needs password?)
-// Frontend calls this before import so it can prompt for password if needed
+// Inspect selected .svf files to show details before reconstruction
 #[tauri::command]
-pub fn inspect_shared_file(zip_path: String) -> Result<SharedFileInfo, String> {
-    let zip_bytes = fs::read(&zip_path)
-        .map_err(|e| format!("could not read share file: {e}"))?;
-    let fragments = sharing::import_shared_bundle(&zip_bytes)?;
-    let first = &fragments[0];
+pub fn inspect_fragments(
+    fragment_paths: Vec<String>,
+) -> Result<FragmentSetInfo, String> {
+    if fragment_paths.is_empty() {
+        return Err("no fragment files selected".to_string());
+    }
 
-    Ok(SharedFileInfo {
+    let mut fragments: Vec<Fragment> = Vec::new();
+    for path_str in &fragment_paths {
+        let data = fs::read(path_str)
+            .map_err(|e| format!("could not read {}: {e}", path_str))?;
+        let frag = sharing::read_opaque_fragment(&data)?;
+        fragments.push(frag);
+    }
+
+    let first = &fragments[0];
+    let enough = fragments.len() >= first.threshold as usize;
+
+    Ok(FragmentSetInfo {
         filename: first.original_filename.clone(),
         size: first.original_size,
-        fragment_count: fragments.len(),
+        fragments_loaded: fragments.len(),
         threshold: first.threshold,
+        total: first.total,
         password_protected: first.password_protected,
+        enough_to_reconstruct: enough,
     })
 }
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SharedFileInfo {
+pub struct FragmentSetInfo {
     pub filename: String,
     pub size: u64,
-    pub fragment_count: usize,
+    pub fragments_loaded: usize,
     pub threshold: u8,
+    pub total: u8,
     pub password_protected: bool,
+    pub enough_to_reconstruct: bool,
 }

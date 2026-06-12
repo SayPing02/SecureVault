@@ -1,18 +1,18 @@
-// AES-256-GCM encryption and key derivation
+// AES-256-GCM encryption
 // GCM gives us both encryption AND integrity checking - if someone
-// tampers with the ciphertext or uses the wrong key, decryption will fail with an error.
+// tampers with the ciphertext or uses the wrong key, decryption will
+// fail with an error instead of giving back garbage data.
 
 use crate::core::error::{CoreError, CoreResult};
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
-use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
+use pbkdf2::pbkdf2_hmac;
 use sha2::Sha256;
 
 pub const KEY_LEN: usize = 32; // AES-256 = 32 bytes
 pub const NONCE_LEN: usize = 12; // 96 bit nonce recommended for GCM
 pub const SALT_LEN: usize = 16;
-pub const PBKDF2_ITERATIONS: u32 = 100_000;
 
 #[derive(Debug, Clone)]
 pub struct Encrypted {
@@ -32,7 +32,10 @@ pub fn generate_salt() -> [u8; SALT_LEN] {
     salt
 }
 
+pub const PBKDF2_ITERATIONS: u32 = 100_000;
+
 // derive a key from a password using PBKDF2
+// 100k iterations makes brute-force attacks slow
 pub fn derive_key_from_password(password: &str, salt: &[u8]) -> [u8; KEY_LEN] {
     let mut key = [0u8; KEY_LEN];
     pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
@@ -96,8 +99,16 @@ mod tests {
     fn test_tampered_data_fails() {
         let key = generate_key();
         let mut enc = encrypt(&key, b"dont tamper").unwrap();
-        enc.ciphertext[0] ^= 0x01; // flip one bit
+        enc.ciphertext[0] ^= 0x01;
         assert!(decrypt(&key, &enc.nonce, &enc.ciphertext).is_err());
+    }
+
+    #[test]
+    fn test_nonce_is_random() {
+        let key = generate_key();
+        let a = encrypt(&key, b"same message").unwrap();
+        let b = encrypt(&key, b"same message").unwrap();
+        assert_ne!(a.nonce, b.nonce);
     }
 
     #[test]
@@ -109,13 +120,5 @@ mod tests {
 
         let c = derive_key_from_password("hunter3", &salt);
         assert_ne!(a, c); // different password = different key
-    }
-
-    #[test]
-    fn test_nonce_is_random() {
-        let key = generate_key();
-        let a = encrypt(&key, b"same message").unwrap();
-        let b = encrypt(&key, b"same message").unwrap();
-        assert_ne!(a.nonce, b.nonce); // nonces must never repeat!
     }
 }

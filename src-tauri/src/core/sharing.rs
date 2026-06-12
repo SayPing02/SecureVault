@@ -1,29 +1,19 @@
-// ZIP packaging for sharing fragments between users
+// ZIP packaging for sharing fragments
 //
-// When sharing: we zip up exactly k (threshold) fragments - thats the
-// minimum needed to reconstruct. Giving more would weaken the scheme.
-//
-// When importing: unzip, parse the .svf files, and hand them back
-// to the caller for reconstruction + re-fragmentation.
+// Fragments are exported as .svf files in opaque format (base64 encoded)
+// so the contents are not human readable, but any machine can decode
+// them without needing the sender's app secret.
 
 use crate::core::error::{CoreError, CoreResult};
 use crate::core::model::Fragment;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 use zip::write::SimpleFileOptions;
-use zip::{ZipArchive, ZipWriter};
+use zip::ZipWriter;
 
-// Build a zip in memory with minimum fragments
-pub fn package_for_sharing(fragments: &[Fragment]) -> CoreResult<Vec<u8>> {
-    let first = fragments
-        .first()
-        .ok_or_else(|| CoreError::Archive("no fragments to package".into()))?;
-
-    let needed = first.threshold as usize;
-    if fragments.len() < needed {
-        return Err(CoreError::Archive(format!(
-            "need {} fragments to share, only have {}",
-            needed, fragments.len()
-        )));
+// Build a zip containing all N fragments as opaque .svf files
+pub fn package_all_fragments(fragments: &[Fragment]) -> CoreResult<Vec<u8>> {
+    if fragments.is_empty() {
+        return Err(CoreError::Archive("no fragments to package".into()));
     }
 
     let mut buffer = Cursor::new(Vec::new());
@@ -32,12 +22,13 @@ pub fn package_for_sharing(fragments: &[Fragment]) -> CoreResult<Vec<u8>> {
         let opts = SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated);
 
-        for frag in fragments.iter().take(needed) {
+        for frag in fragments {
             let name = format!("fragment_{}.svf", frag.index);
-            let json = serde_json::to_vec_pretty(frag)?;
+            let opaque = frag.to_opaque_bytes()
+                .map_err(|e| CoreError::Archive(format!("could not encode fragment: {e}")))?;
             zip.start_file(name, opts)
                 .map_err(|e| CoreError::Archive(e.to_string()))?;
-            zip.write_all(&json)?;
+            zip.write_all(&opaque)?;
         }
 
         zip.finish().map_err(|e| CoreError::Archive(e.to_string()))?;
@@ -46,47 +37,10 @@ pub fn package_for_sharing(fragments: &[Fragment]) -> CoreResult<Vec<u8>> {
     Ok(buffer.into_inner())
 }
 
-// Parse a shared zip back into fragments
-pub fn import_shared_bundle(zip_bytes: &[u8]) -> CoreResult<Vec<Fragment>> {
-    let cursor = Cursor::new(zip_bytes);
-    let mut archive = ZipArchive::new(cursor)
-        .map_err(|e| CoreError::Archive(e.to_string()))?;
-
-    let mut fragments = Vec::new();
-    for i in 0..archive.len() {
-        let mut entry = archive.by_index(i)
-            .map_err(|e| CoreError::Archive(e.to_string()))?;
-
-        if !entry.name().ends_with(".svf") {
-            continue; // skip non-fragment files
-        }
-
-        let mut contents = String::new();
-        entry.read_to_string(&mut contents)?;
-
-        let frag: Fragment = serde_json::from_str(&contents)
-            .map_err(|e| CoreError::InvalidFragment(
-                format!("couldn't parse fragment: {e}")
-            ))?;
-        fragments.push(frag);
-    }
-
-    if fragments.is_empty() {
-        return Err(CoreError::Archive(
-            "no .svf files found in the bundle".into()
-        ));
-    }
-
-    // make sure all fragments are for the same file
-    let first_id = fragments[0].file_id.clone();
-    if fragments.iter().any(|f| f.file_id != first_id) {
-        return Err(CoreError::InvalidFragment(
-            "bundle has fragments from different files".into()
-        ));
-    }
-
-    fragments.sort_by_key(|f| f.index);
-    Ok(fragments)
+// Parse a .svf file from its opaque bytes into a Fragment
+pub fn read_opaque_fragment(data: &[u8]) -> CoreResult<Fragment> {
+    Fragment::from_opaque_bytes(data)
+        .map_err(|e| CoreError::InvalidFragment(e))
 }
 
 #[cfg(test)]
@@ -96,7 +50,7 @@ mod tests {
     use crate::core::model::SplitParams;
 
     #[test]
-    fn test_share_and_import() {
+    fn test_package_and_read_back() {
         let params = SplitParams {
             total_fragments: 5,
             threshold: 3,
@@ -106,21 +60,36 @@ mod tests {
             b"shareable content", "share.txt", &params
         ).unwrap();
 
-        let zip = package_for_sharing(&frags).unwrap();
-        let imported = import_shared_bundle(&zip).unwrap();
+        // package all 5
+        let zip = package_all_fragments(&frags).unwrap();
+        assert!(!zip.is_empty());
 
-        // should only have k=3 fragments in the bundle
-        assert_eq!(imported.len(), 3);
+        // verify we can read fragments back from zip
+        let cursor = std::io::Cursor::new(zip);
+        let mut archive = zip::ZipArchive::new(cursor).unwrap();
+        assert_eq!(archive.len(), 5);
 
-        // should be able to reconstruct from those 3
-        let recovered = fragmenter::reconstruct_file(&imported, None).unwrap();
-        assert_eq!(recovered, b"shareable content");
+        // read one fragment and verify it decodes
+        let mut entry = archive.by_index(0).unwrap();
+        let mut contents = Vec::new();
+        std::io::Read::read_to_end(&mut entry, &mut contents).unwrap();
+        let recovered = read_opaque_fragment(&contents).unwrap();
+        assert_eq!(recovered.original_filename, "share.txt");
     }
 
     #[test]
-    fn test_empty_zip() {
-        let mut buf = Cursor::new(Vec::new());
-        ZipWriter::new(&mut buf).finish().unwrap();
-        assert!(import_shared_bundle(&buf.into_inner()).is_err());
+    fn test_opaque_is_not_readable() {
+        let params = SplitParams {
+            total_fragments: 3,
+            threshold: 2,
+            password: None,
+        };
+        let frags = fragmenter::split_file(b"secret", "s.txt", &params).unwrap();
+        let opaque = frags[0].to_opaque_bytes().unwrap();
+
+        // the opaque bytes should NOT contain the filename in plain text
+        let as_str = String::from_utf8_lossy(&opaque);
+        assert!(!as_str.contains("s.txt"));
+        assert!(!as_str.contains("original_filename"));
     }
 }

@@ -1,14 +1,13 @@
-// This is the main module that ties crypto + shamir together
-// It handles splitting a file into fragments and reconstructing it back
+// File fragmentation and reconstruction
 //
-// Splitting steps
+// How splitting works:
 // 1. generate random AES key
 // 2. if user set a password, wrap the key with password-derived encryption
 // 3. encrypt the file with the AES key
 // 4. shamir-split the key into n shares
 // 5. package each share + ciphertext into a Fragment
 //
-// Reconstruction is just the reverse
+// Reconstruction is the reverse
 
 use crate::core::crypto;
 use crate::core::error::{CoreError, CoreResult};
@@ -43,7 +42,9 @@ pub fn split_file(
     let file_key = crypto::generate_key();
     let encrypted_file = crypto::encrypt(&file_key, file_bytes)?;
 
-    // step 2: optionally wrap the key behind a password, will need fragments and password
+    // step 2: optionally wrap the key behind a password
+    // if password protected, we encrypt the AES key AGAIN with a password-derived key
+    // so even having k fragments isnt enough without the password
     let salt = crypto::generate_salt();
     let (key_to_share, salt_b64): (Vec<u8>, String) = match password {
         Some(pw) => {
@@ -110,7 +111,7 @@ pub fn reconstruct_file(
         ));
     }
 
-    // step 1: combine shamir shares to get back key
+    // step 1: combine shamir shares to get the key back
     let mut shares = Vec::new();
     for frag in fragments.iter().take(first.threshold as usize) {
         let y = B64.decode(&frag.share_y_b64)
@@ -165,7 +166,6 @@ pub fn reconstruct_file(
     Ok(plaintext)
 }
 
-// convert Vec<u8> into a fixed-size key array
 fn to_key_array(bytes: &[u8]) -> CoreResult<[u8; crypto::KEY_LEN]> {
     if bytes.len() != crypto::KEY_LEN {
         return Err(CoreError::InvalidFragment(format!(
@@ -233,7 +233,6 @@ mod tests {
     fn test_any_k_subset() {
         let data = b"choose any k of the n fragments";
         let frags = split_file(data, "x.bin", &make_params(5, 3, None)).unwrap();
-        // pick fragments 2, 4, 5 (non-contiguous)
         let subset = vec![frags[1].clone(), frags[3].clone(), frags[4].clone()];
         assert_eq!(reconstruct_file(&subset, None).unwrap(), data);
     }

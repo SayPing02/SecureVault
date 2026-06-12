@@ -1,9 +1,5 @@
-# --- IDE ---
-.vs/
-.idea/
-.vscode/
-
 # --- Rust ---
+# Build output. Per Tauri's advice, the target folder is never committed.
 /src-tauri/target/
 /dist/
 
@@ -12,9 +8,14 @@ node_modules/
 .vite/
 
 # --- Tauri generated files ---
+# `gen/` holds schemas regenerated on every build.
 /src-tauri/gen/
 
-# --- OS noise ---
+# --- OS / editor noise ---
 .DS_Store
 Thumbs.db
 *.swp
+.idea/
+.vscode/
+
+# NOTE: Cargo.lock IS committed (see README) so builds are reproducible.

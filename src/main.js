@@ -62,7 +62,6 @@ document.querySelectorAll("[data-goto]").forEach((btn) => {
 });
 
 // --- password modal ---
-// returns the password string or null if cancelled
 
 function askPassword(title, subtitle) {
   return new Promise((resolve) => {
@@ -144,7 +143,7 @@ document.getElementById("btnSplit").addEventListener("click", async () => {
   const password = document.getElementById("splitPassword").value;
 
   if (k < 2 || n < 2 || k > n) {
-    logTo("splitConsole", "⚠ Invalid parameters: Threshold must be ≥ 2 and ≤ N", "warn");
+    logTo("splitConsole", "⚠ Invalid parameters: K must be ≥ 2 and ≤ N", "warn");
     return;
   }
 
@@ -158,7 +157,7 @@ document.getElementById("btnSplit").addEventListener("click", async () => {
   lbl.classList.remove("hidden");
   bar.style.width = "40%";
   lbl.textContent = "Encrypting and splitting…";
-  logTo("splitConsole", `Splitting file: Total=${n}, Minimum=${k}`, "info");
+  logTo("splitConsole", `Splitting file: N=${n}, K=${k}`, "info");
 
   try {
     const result = await invoke("split_and_store", {
@@ -297,74 +296,123 @@ async function deleteFile(file) {
 
 document.getElementById("btnRefreshVault").addEventListener("click", refreshVault);
 
-// --- import tab ---
+// --- reconstruct tab (select individual fragment files) ---
 
-let importZipPath = null;
-let importInfo = null;
+// collected fragment file paths
+let fragmentPaths = [];
+let fragmentInfo = null;
 
-document.getElementById("importDropZone").addEventListener("click", async () => {
+// select fragment files (multi-select)
+async function pickFragments() {
   const selected = await open({
-    multiple: false,
+    multiple: true,
     directory: false,
-    title: "Choose a shared .zip bundle",
-    filters: [{ name: "SecureVault Share", extensions: ["zip"] }],
+    title: "Select fragment files (.svf)",
+      filters: [{ name: "SecureVault Fragments", extensions: ["svf"] }, { name: "All Files", extensions: ["*"] }],
+
   });
   if (!selected) return;
 
-  importZipPath = selected;
-  const name = selected.split(/[\\/]/).pop();
-  const pill = document.getElementById("importPickedFile");
-  pill.textContent = "📦 " + name;
-  pill.classList.remove("hidden");
-  document.getElementById("importDropContent").style.opacity = "0.4";
-  logTo("importConsole", `Bundle selected: ${name}`, "ok");
+  // selected could be a single path string or an array
+  const paths = Array.isArray(selected) ? selected : [selected];
 
-  // inspect the bundle to see if it needs a password
-  try {
-    importInfo = await invoke("inspect_shared_file", { zipPath: importZipPath });
-    const lock = importInfo.passwordProtected ? " · 🔒 password protected" : "";
-    document.getElementById("importInfo").textContent =
-      `${importInfo.filename} · ${fmtBytes(importInfo.size)} · ` +
-      `${importInfo.fragmentCount} fragments · threshold ${importInfo.threshold}${lock}`;
-    document.getElementById("importInfoCard").classList.remove("hidden");
-    logTo("importConsole", "✓ Bundle inspected successfully", "ok");
-  } catch (err) {
-    logTo("importConsole", "✗ Could not read bundle: " + err, "err");
-    toast("Invalid share bundle", "err");
+  // add new paths, avoiding duplicates
+  for (const p of paths) {
+    if (!fragmentPaths.includes(p)) {
+      fragmentPaths.push(p);
+      const name = p.split(/[\\/]/).pop();
+      logTo("importConsole", `Added: ${name}`, "ok");
+    }
   }
-});
 
-document.getElementById("btnImport").addEventListener("click", async () => {
-  if (!importZipPath) {
-    logTo("importConsole", "⚠ No bundle selected", "warn");
+  updateFragmentDisplay();
+  inspectLoadedFragments();
+}
+
+function updateFragmentDisplay() {
+  const pill = document.getElementById("importPickedFiles");
+  if (fragmentPaths.length === 0) {
+    pill.classList.add("hidden");
+    document.getElementById("importDropContent").style.opacity = "1";
     return;
   }
 
+  const names = fragmentPaths.map((p) => p.split(/[\\/]/).pop());
+  pill.textContent = "🧩 " + names.join(", ");
+  pill.classList.remove("hidden");
+  document.getElementById("importDropContent").style.opacity = "0.4";
+}
+
+async function inspectLoadedFragments() {
+  if (fragmentPaths.length === 0) return;
+
+  try {
+    fragmentInfo = await invoke("inspect_fragments", {
+      fragmentPaths: fragmentPaths,
+    });
+    const status = fragmentInfo.enoughToReconstruct
+      ? "✅ Ready to reconstruct"
+      : `⚠ Need ${fragmentInfo.threshold - fragmentInfo.fragmentsLoaded} more`;
+
+    const lock = fragmentInfo.passwordProtected ? " · 🔒 password protected" : "";
+
+    document.getElementById("importInfo").textContent =
+      `${fragmentInfo.filename} · ${fmtBytes(fragmentInfo.size)} · ` +
+      `${fragmentInfo.fragmentsLoaded} of ${fragmentInfo.total} fragments · ` +
+      `threshold ${fragmentInfo.threshold} · ${status}${lock}`;
+    document.getElementById("importInfoCard").classList.remove("hidden");
+    logTo("importConsole",
+      `✓ ${fragmentInfo.fragmentsLoaded} fragment(s) loaded for "${fragmentInfo.filename}"`,
+      "ok");
+  } catch (err) {
+    logTo("importConsole", "✗ Could not read fragments: " + err, "err");
+    toast("Error reading fragments", "err");
+  }
+}
+
+document.getElementById("importDropZone").addEventListener("click", pickFragments);
+document.getElementById("btnImportAddMore").addEventListener("click", pickFragments);
+
+document.getElementById("btnImport").addEventListener("click", async () => {
+  if (fragmentPaths.length === 0) {
+    logTo("importConsole", "⚠ No fragments selected", "warn");
+    return;
+  }
+
+  if (fragmentInfo && !fragmentInfo.enoughToReconstruct) {
+    logTo("importConsole",
+      `⚠ Not enough fragments: need ${fragmentInfo.threshold}, have ${fragmentInfo.fragmentsLoaded}`,
+      "warn");
+    toast(`Need at least ${fragmentInfo.threshold} fragments`, "err");
+    return;
+  }
+
+  // prompt for password if needed
   let password = null;
-  if (importInfo && importInfo.passwordProtected) {
+  if (fragmentInfo && fragmentInfo.passwordProtected) {
     password = await askPassword(
       "Password Required",
-      `"${importInfo.filename}" requires a password to reconstruct.`
+      `"${fragmentInfo.filename}" requires a password to reconstruct.`
     );
     if (password === null) return;
   }
 
   const btn = document.getElementById("btnImport");
   btn.disabled = true;
-  logTo("importConsole", "Importing and re-fragmenting…", "info");
+  logTo("importConsole", "Reconstructing and storing in vault…", "info");
 
   try {
-    const result = await invoke("import_shared_file", {
-      zipPath: importZipPath,
+    const result = await invoke("reconstruct_from_fragments", {
+      fragmentPaths: fragmentPaths,
       password: password,
     });
     logTo("importConsole", "✓ " + result.message, "ok");
-    toast("File imported into your vault", "ok");
+    toast("File reconstructed and stored in vault", "ok");
     resetImport();
     refreshVault();
   } catch (err) {
     logTo("importConsole", "✗ Error: " + err, "err");
-    toast("Import failed: " + err, "err");
+    toast("Reconstruction failed: " + err, "err");
   } finally {
     btn.disabled = false;
   }
@@ -373,9 +421,9 @@ document.getElementById("btnImport").addEventListener("click", async () => {
 document.getElementById("btnImportReset").addEventListener("click", resetImport);
 
 function resetImport() {
-  importZipPath = null;
-  importInfo = null;
-  document.getElementById("importPickedFile").classList.add("hidden");
+  fragmentPaths = [];
+  fragmentInfo = null;
+  document.getElementById("importPickedFiles").classList.add("hidden");
   document.getElementById("importDropContent").style.opacity = "1";
   document.getElementById("importInfoCard").classList.add("hidden");
 }
