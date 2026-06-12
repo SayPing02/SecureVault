@@ -144,7 +144,7 @@ document.getElementById("btnSplit").addEventListener("click", async () => {
   const password = document.getElementById("splitPassword").value;
 
   if (k < 2 || n < 2 || k > n) {
-    logTo("splitConsole", "⚠ Invalid parameters: K must be ≥ 2 and ≤ N", "warn");
+    logTo("splitConsole", "⚠ Invalid parameters: Threshold must be ≥ 2 and ≤ N", "warn");
     return;
   }
 
@@ -158,7 +158,7 @@ document.getElementById("btnSplit").addEventListener("click", async () => {
   lbl.classList.remove("hidden");
   bar.style.width = "40%";
   lbl.textContent = "Encrypting and splitting…";
-  logTo("splitConsole", `Splitting file: N=${n}, K=${k}`, "info");
+  logTo("splitConsole", `Splitting file: Total=${n}, Minimum=${k}`, "info");
 
   try {
     const result = await invoke("split_and_store", {

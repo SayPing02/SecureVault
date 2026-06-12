@@ -30,20 +30,17 @@
     <button class="tab" data-tab="import">
       <span class="tab-icon">📥</span> Import Shared
     </button>
-    <button class="tab" data-tab="about">
-      <span class="tab-icon">📐</span> How It Works
-    </button>
   </div>
 
   <!-- ════════════════════════ VAULT PANEL ════════════════════════ -->
   <div id="panel-vault" class="panel active">
     <div class="section-title">My Secure Files</div>
-    <div class="section-sub">// Files stored as encrypted fragments in your private vault</div>
+    <div class="section-sub">// Files stored</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
-      <span>Click a file to <strong>reconstruct &amp; download</strong> it, or use
-        <strong>Share</strong> to export the minimum fragments for another user.</span>
+      <span><strong>Reconstruct, Download</strong>, or
+        <strong>Share</strong> to share file with other user.</span>
     </div>
 
     <div class="card">
@@ -62,12 +59,11 @@
   <!-- ════════════════════════ SPLIT PANEL ════════════════════════ -->
   <div id="panel-split" class="panel">
     <div class="section-title">Add a File to the Vault</div>
-    <div class="section-sub">// Shatter your file into encrypted fragments using Shamir's Secret Sharing</div>
+    <div class="section-sub">// Break your file into encrypted fragments</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
-      <span>Your file is split into <strong>N fragments</strong>. Any <strong>K fragments</strong>
-        (threshold) can reconstruct the original. No single fragment reveals any information.</span>
+      <span>Import a file of  <strong>any type</strong>. It will be securely stored to your configurations</span>
     </div>
 
     <!-- File Select -->
@@ -88,19 +84,19 @@
       <div class="card-title">Sharing Parameters</div>
       <div class="form-row triple">
         <div>
-          <label>Total Fragments (N)</label>
+          <label>Total Fragments</label>
           <input type="number" id="totalShares" min="2" max="10" value="5">
         </div>
         <div>
-          <label>Threshold (K)</label>
+          <label>Minimum recovery</label>
           <input type="number" id="threshold" min="2" max="5" value="3">
         </div>
-        <div>
+        <!--<div>
           <label>Encryption</label>
           <select id="encryption" disabled>
             <option value="aes256">AES-256-GCM</option>
           </select>
-        </div>
+        </div>-->
       </div>
 
       <div class="form-row single">
@@ -112,7 +108,7 @@
 
       <!-- Threshold visual -->
       <div>
-        <label>Threshold Visualisation (🔵 = required · 🟢 = bonus)</label>
+        <label>Fragment Visualisation (🔵 = required · 🟢 = bonus)</label>
         <div class="threshold-visual" id="thresholdVisual"></div>
       </div>
     </div>
@@ -142,12 +138,11 @@
   <!-- ════════════════════════ IMPORT PANEL ════════════════════════ -->
   <div id="panel-import" class="panel">
     <div class="section-title">Import a Shared File</div>
-    <div class="section-sub">// Load a .zip bundle another user shared with you</div>
+    <div class="section-sub">// Load and save a file shared to you</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
-      <span>Select the <strong>.zip bundle</strong> you received. SecureVault will reconstruct
-        the file and store it in your own vault using its original parameters.</span>
+      <span>Select the <strong>.zip bundle</strong> you received. Import to your storage.</span>
     </div>
 
     <div class="card">
@@ -170,7 +165,7 @@
     <div class="card">
       <div class="card-title">Operation</div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btnImport">📥 Import into Vault</button>
+        <button class="btn btn-primary" id="btnImport">📥 Import File</button>
         <button class="btn btn-secondary" id="btnImportReset">↺ Reset</button>
       </div>
     </div>
@@ -182,85 +177,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ════════════════════════ ABOUT PANEL ════════════════════════ -->
-  <div id="panel-about" class="panel">
-    <div class="section-title">How It Works</div>
-    <div class="section-sub">// Shamir's (K, N) Secret Sharing Scheme + AES-256-GCM Encryption</div>
-
-    <div class="card">
-      <div class="card-title">The Hybrid Scheme</div>
-      <div class="info-box">
-        <span class="info-box-icon">🔑</span>
-        <div>
-          <strong>1. Encrypt</strong><br>
-          <span style="font-size:12px">The whole file is encrypted once with a random 256-bit AES key using AES-256-GCM.</span>
-        </div>
-      </div>
-      <div class="info-box" style="border-color: rgba(0,255,136,0.2); background: rgba(0,255,136,0.04);">
-        <span class="info-box-icon">✂️</span>
-        <div>
-          <strong>2. Split the key</strong><br>
-          <span style="font-size:12px">Only the small AES key is split with Shamir's Secret Sharing into N shares. This keeps every fragment tiny.</span>
-        </div>
-      </div>
-      <div class="info-box" style="border-color: rgba(255,107,53,0.2); background: rgba(255,107,53,0.04);">
-        <span class="info-box-icon">🧩</span>
-        <div>
-          <strong>3. Package</strong><br>
-          <span style="font-size:12px">Each fragment carries one key share plus a copy of the ciphertext. Any K fragments rebuild the file; K-1 reveal nothing.</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Key Properties</div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div class="info-box">
-          <span class="info-box-icon">🔒</span>
-          <div>
-            <strong>Perfect Secrecy</strong><br>
-            <span style="font-size:12px">Any K-1 fragments reveal <em>zero</em> information about the key. Mathematically proven.</span>
-          </div>
-        </div>
-        <div class="info-box" style="border-color: rgba(0,255,136,0.2); background: rgba(0,255,136,0.04);">
-          <span class="info-box-icon">♻️</span>
-          <div>
-            <strong>Fault Tolerance</strong><br>
-            <span style="font-size:12px">Up to N-K fragments can be lost without affecting recovery.</span>
-          </div>
-        </div>
-        <div class="info-box" style="border-color: rgba(255,107,53,0.2); background: rgba(255,107,53,0.04);">
-          <span class="info-box-icon">🎲</span>
-          <div>
-            <strong>GF(256) Arithmetic</strong><br>
-            <span style="font-size:12px">Byte-level polynomial evaluation over a Galois Field for exact integer arithmetic.</span>
-          </div>
-        </div>
-        <div class="info-box" style="border-color: rgba(0,136,204,0.2); background: rgba(0,136,204,0.04);">
-          <span class="info-box-icon">🛡️</span>
-          <div>
-            <strong>Encrypted at Rest</strong><br>
-            <span style="font-size:12px">Fragment files in the vault are themselves AES-encrypted, unreadable outside the app.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Optional Password Layer</div>
-      <div class="info-box">
-        <span class="info-box-icon">🔐</span>
-        <div>
-          <span style="font-size:13px">When you set a password, the AES key is itself encrypted with a
-          PBKDF2-derived key before being split. Even someone holding K fragments cannot
-          reconstruct the file without the password.</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /app -->
 
 <!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
 <div id="passwordModal" class="modal-overlay hidden">

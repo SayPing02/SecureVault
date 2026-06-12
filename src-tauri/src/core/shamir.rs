@@ -159,7 +159,7 @@ mod tests {
         let secret = b"pick any three of these shares!!";
         let shares = split(secret, 5, 3).unwrap();
 
-        // try shares 1, 3, 5 instead of 1, 2, 3
+        
         let subset = vec![
             shares[0].clone(),
             shares[2].clone(),

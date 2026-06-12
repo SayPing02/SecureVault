@@ -30,7 +30,7 @@ pub fn share_vault_file(
 
     let zip_bytes = sharing::package_for_sharing(&fragments)?;
 
-    // save to Downloads as "filename-share.zip" (without the file extension)
+    // save to Downloads as "filename-share.zip"
     let downloads = dirs::download_dir()
         .ok_or_else(|| "could not find Downloads".to_string())?;
     let stem = std::path::Path::new(&filename)
@@ -49,8 +49,7 @@ pub fn share_vault_file(
     ))
 }
 
-// Import a shared zip: reconstruct the file, then re-fragment it
-// into our own vault using the original parameters
+// Import a shared zip: reconstruct the file, then re-fragment into our own vault with original parameters
 #[tauri::command]
 pub fn import_shared_file(
     zip_path: String,
