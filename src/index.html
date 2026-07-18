@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureVault — Secret File Sharing System</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ════════════════════════ INTRO / SPLASH SCREEN ════════════════════════ -->
+<div id="introScreen" class="intro-screen">
+  <div class="intro-content">
+    <img class="intro-logo" src="logo.png" alt="SecureVault logo">
+    <div class="intro-title">Secure<span>Vault</span></div>
+    <div class="intro-tagline">// Encrypted. Fragmented. Yours.</div>
+    <div class="intro-loader"><div class="intro-loader-bar"></div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════ LOCK SCREEN (biometric / PIN) ════════════════════════ -->
+<div id="lockScreen" class="intro-screen hidden">
+  <div class="intro-content">
+    <img class="intro-logo" src="logo.png" alt="SecureVault logo">
+    <div class="intro-title">Secure<span>Vault</span></div>
+    <div class="intro-tagline" id="lockScreenSub">// Vault locked</div>
+
+    <button class="btn btn-primary hidden" id="btnUnlockBiometric">Unlock</button>
+
+    <div id="lockScreenPinRow" class="lock-pin-row hidden">
+      <input type="password" id="lockScreenPinInput" placeholder="Enter PIN">
+      <button class="btn btn-primary" id="btnUnlockPin">Unlock</button>
+    </div>
+
+    <div class="modal-error hidden" id="lockScreenError"></div>
+  </div>
+</div>
+
+<header>
+  <img class="logo-icon" src="logo.png" alt="SecureVault logo">
+  <div class="logo-text">Secure<span>Vault</span></div>
+</header>
+
+<div class="app">
+
+  <!-- ════════════════════════════ TABS ════════════════════════════ -->
+  <div class="tabs">
+    <button class="tab active" data-tab="vault">My Files</button>
+    <button class="tab" data-tab="split">Add File</button>
+    <button class="tab" data-tab="import">Reconstruct</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- ════════════════════════ VAULT PANEL ════════════════════════ -->
+  <div id="panel-vault" class="panel active">
+    <div class="section-title">My Secure Files</div>
+    <div class="section-sub">// Files stored on your device</div>
+
+    <div class="info-box">
+      <span>Click a file to <strong>preview its fragments</strong>, or use the buttons to download, Share, or delete.</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Stored Files</div>
+      <input type="text" id="vaultSearchInput" class="vault-search" placeholder="Search files by name…">
+      <div id="vaultList" class="vault-list">
+        <!-- populated by main.js -->
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" data-goto="split">Add a New File</button>
+      <button class="btn btn-secondary" id="btnRefreshVault">Refresh</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════ SPLIT PANEL ════════════════════════ -->
+  <div id="panel-split" class="panel">
+    <div class="section-title">Add a File to the Vault</div>
+    <div class="section-sub">// Store the file into device</div>
+
+    <div class="info-box">
+      <span>Choose <strong>N</strong> (total fragments) and <strong>K</strong> (threshold) — any <strong>K</strong> of the <strong>N</strong> fragments can rebuild the file.</span>
+    </div>
+
+    <!-- File Select -->
+    <div class="card">
+      <div class="card-title">Select File</div>
+      <div class="drop-zone" id="splitDropZone">
+        <div id="splitDropContent">
+          <div class="drop-text">Click to browse for a file</div>
+          <div class="drop-sub">Any file type · stored locally</div>
+        </div>
+      </div>
+      <div id="splitPickedFile" class="picked-file hidden"></div>
+      <!-- shown after file is selected -->
+      <div id="splitFileNameRow" class="form-row single hidden">
+        <div>
+          <label>Stored As</label>
+          <input type="text" id="splitFileNameInput" placeholder="File name in the vault">
+        </div>
+      </div>
+      <div id="splitFileInfoBar" class="file-info-bar hidden">
+        <span id="splitFileSizeDisplay" class="file-info-item"></span>
+        <span class="info-sep">·</span>
+        <span id="splitVaultSpaceDisplay" class="file-info-item"></span>
+        <span class="info-sep">·</span>
+        <span id="splitTimeEstDisplay" class="file-info-item accent"></span>
+      </div>
+      <div id="splitLargeFileWarning" class="large-file-warning hidden">
+        Large file: each of the N fragments stores a full encrypted copy, so total vault usage equals N × file size.
+      </div>
+      <div id="splitRecommendBanner" class="recommend-banner hidden">
+        <span id="splitRecommendText"></span>
+        <button class="btn-recommend-apply" id="btnRecommendApply">Apply</button>
+        <button class="btn-recommend-dismiss" id="btnRecommendDismiss">Dismiss</button>
+      </div>
+    </div>
+
+    <!-- Config -->
+    <div class="card">
+      <div class="card-title">Sharing Parameters</div>
+      <div class="form-row triple">
+        <div>
+          <label>Total Fragments</label>
+          <input type="number" id="totalShares" min="2" value="5">
+        </div>
+        <div>
+          <label>Minimum Threshold</label>
+          <input type="number" id="threshold" min="2" value="3">
+        </div>
+        <!--<div>
+          <label>Encryption</label>
+          <select id="encryption" disabled>
+            <option value="aes256">AES-256-GCM</option>
+          </select>
+        </div>-->
+      </div>
+
+      <div class="form-row single">
+        <div>
+          <label>Password (optional)</label>
+          <input type="password" id="splitPassword" placeholder="Leave blank for no password">
+          <div class="password-hint" id="splitPasswordHint"></div>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="toggle-row">
+          <label class="toggle-label" for="splitCompress">
+            Compress before encrypting
+            <span class="toggle-hint">Shrinks text, documents and uncompressed images significantly. No benefit for already-compressed files (ZIP, MP4, JPG).</span>
+          </label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="splitCompress" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Cipher selection -->
+      <div class="form-row single">
+        <div>
+          <label>Encryption Cipher</label>
+          <div class="cipher-grid" id="cipherGrid">
+            <label class="cipher-card selected" data-value="aes256gcm">
+              <input type="radio" name="cipher" value="aes256gcm" checked hidden>
+              <div class="cipher-name">AES-256-GCM</div>
+              <div class="cipher-desc">Hardware-accelerated on modern CPUs. Industry standard.</div>
+            </label>
+            <label class="cipher-card" data-value="chacha20">
+              <input type="radio" name="cipher" value="chacha20" hidden>
+              <div class="cipher-name">ChaCha20-Poly1305</div>
+              <div class="cipher-desc">Faster on devices without AES hardware (ARM, older CPUs).</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Size obfuscation padding -->
+      <div class="form-row single">
+        <div>
+          <label>Size Obfuscation <span class="toggle-hint">Random padding added to hide the true file size inside each fragment.</span></label>
+          <div class="kdf-grid padding-grid" id="paddingGrid">
+            <label class="kdf-card selected" data-value="0">
+              <input type="radio" name="padding" value="0" checked hidden>
+              <div class="kdf-name">None</div>
+              <div class="kdf-meta">No overhead</div>
+            </label>
+            <label class="kdf-card" data-value="10">
+              <input type="radio" name="padding" value="10" hidden>
+              <div class="kdf-name">+10%</div>
+              <div class="kdf-meta">Low overhead</div>
+            </label>
+            <label class="kdf-card" data-value="25">
+              <input type="radio" name="padding" value="25" hidden>
+              <div class="kdf-name">+25%</div>
+              <div class="kdf-meta">Moderate</div>
+            </label>
+            <label class="kdf-card" data-value="50">
+              <input type="radio" name="padding" value="50" hidden>
+              <div class="kdf-name">+50%</div>
+              <div class="kdf-meta">Strong cover</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- KDF selection (always visible, clearly labelled as password-only) -->
+      <div class="form-row single">
+        <div>
+          <label>Password Key Strength <span class="toggle-hint">Only applies when a password is set above.</span></label>
+          <div class="kdf-grid" id="kdfGrid">
+            <label class="kdf-card" data-value="fast">
+              <input type="radio" name="kdf" value="fast" hidden>
+              <div class="kdf-name">Fast</div>
+              <div class="kdf-meta">~10 ms · PBKDF2 10k</div>
+            </label>
+            <label class="kdf-card selected" data-value="standard">
+              <input type="radio" name="kdf" value="standard" checked hidden>
+              <div class="kdf-name">Standard</div>
+              <div class="kdf-meta">~100 ms · PBKDF2 100k</div>
+            </label>
+            <label class="kdf-card" data-value="strong">
+              <input type="radio" name="kdf" value="strong" hidden>
+              <div class="kdf-name">Strong</div>
+              <div class="kdf-meta">~1 s · PBKDF2 1M</div>
+            </label>
+            <label class="kdf-card" data-value="argon2id">
+              <input type="radio" name="kdf" value="argon2id" hidden>
+              <div class="kdf-name">Argon2id</div>
+              <div class="kdf-meta">~1-2 s · 64 MB RAM · best</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threshold visual -->
+      <div>
+        <label>Fragment Visualisation (filled = required · outlined = bonus)</label>
+        <div class="threshold-visual" id="thresholdVisual"></div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-title">Operation</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSplit">Add to Vault</button>
+        <button class="btn btn-secondary hidden" id="btnSplitPause">Pause</button>
+        <button class="btn btn-secondary hidden" id="btnSplitCancel">Cancel</button>
+        <button class="btn btn-secondary" id="btnSplitReset">Reset</button>
+      </div>
+      <div class="progress-wrap hidden" id="splitProgress">
+        <div class="progress-bar" id="splitProgressBar"></div>
+      </div>
+      <div class="progress-footer hidden" id="splitProgressFooter">
+        <span class="progress-label" id="splitProgressLabel"></span>
+        <span class="progress-time" id="splitTimeRemaining"></span>
+      </div>
+    </div>
+
+    <!-- Console -->
+    <div class="card">
+      <div class="card-title">Operation Log</div>
+      <div class="console" id="splitConsole">
+        <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">SecureVault ready. Select a file to begin.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════ IMPORT PANEL ════════════════════════ -->
+  <div id="panel-import" class="panel">
+    <div class="section-title">Reconstruct from Fragments</div>
+    <div class="section-sub">// Select individual .svf or .svf3 fragment files to reconstruct a file</div>
+
+    <div class="info-box">
+      <span>Select <strong>individual fragment files</strong>.</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Select Fragment Files</div>
+      <div class="drop-zone" id="importDropZone">
+        <div id="importDropContent">
+          <div class="drop-text">Click to browse for fragment files</div>
+          <div class="drop-sub">Select multiple .svf or .svf3 files</div>
+        </div>
+      </div>
+      <div id="importPickedFiles" class="picked-file hidden"></div>
+    </div>
+
+    <div class="card hidden" id="importInfoCard">
+      <div class="card-title">Fragment Details</div>
+      <div id="importInfo" class="slot-info filled"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Operation</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnImport">Store</button>
+        <button class="btn btn-secondary hidden" id="btnImportPause">Pause</button>
+        <button class="btn btn-secondary hidden" id="btnImportCancel">Cancel</button>
+        <button class="btn btn-secondary" id="btnImportAddMore">+ Add More Fragments</button>
+        <button class="btn btn-secondary" id="btnImportReset">Reset</button>
+      </div>
+      <div class="progress-wrap hidden" id="importProgress">
+        <div class="progress-bar" id="importProgressBar"></div>
+      </div>
+      <div class="progress-footer hidden" id="importProgressFooter">
+        <span class="progress-label" id="importProgressLabel"></span>
+        <span class="progress-time" id="importTimeRemaining"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Operation Log</div>
+      <div class="console" id="importConsole">
+        <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Select fragment files to begin.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════ SETTINGS PANEL ════════════════════════ -->
+  <div id="panel-settings" class="panel">
+    <div class="section-title">Settings</div>
+    <div class="section-sub">// App preferences and security</div>
+
+    <div class="card">
+      <div class="card-title">Security</div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <span id="biometricToggleLabel">Touch ID / Windows Hello</span>
+          <span class="toggle-hint" id="biometricToggleHint">
+            Checking device support…
+          </span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="biometricToggle" disabled>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-top: 18px;">
+        <div class="toggle-label">
+          <span>PIN Lock</span>
+          <span class="toggle-hint" id="pinToggleHint">
+            Optionally require a PIN to open SecureVault.
+          </span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="pinToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+<!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
+<div id="passwordModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Password Required</div>
+    <div class="modal-sub" id="modalSub">This file is password protected.</div>
+    <div>
+      <label>Password</label>
+      <input type="password" id="modalPasswordInput" placeholder="Enter the file password">
+    </div>
+    <div class="modal-error hidden" id="modalError">Incorrect password</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ SHARE ZIP NAME MODAL ════════════════════════ -->
+<div id="zipNameModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Name the Share File</div>
+    <div class="modal-sub" id="zipNameModalSub">Choose a name for the exported zip.</div>
+    <div>
+      <label>File Name</label>
+      <input type="text" id="zipNameInput" placeholder="e.g. report-share">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="zipNameCancel">Cancel</button>
+      <button class="btn btn-primary" id="zipNameConfirm">Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ FRAGMENT LABELS MODAL ════════════════════════ -->
+<div id="labelsModal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <div class="modal-title">Fragment Destinations</div>
+    <div class="modal-sub" id="labelsModalSub">Note where each fragment went — for your own reference only.</div>
+    <div class="labels-list" id="labelsList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="labelsCancel">Cancel</button>
+      <button class="btn btn-primary" id="labelsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ FRAGMENT PREVIEW MODAL ════════════════════════ -->
+<div id="fragmentPreviewModal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="fragmentPreviewTitle">Fragment Preview</div>
+    <div class="modal-sub" id="fragmentPreviewSub"></div>
+    <div class="fragments-grid" id="fragmentPreviewGrid"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="fragmentPreviewClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ SET PIN MODAL ════════════════════════ -->
+<div id="pinSetupModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Set a PIN</div>
+    <div class="modal-sub">Required each time you open SecureVault.</div>
+    <div>
+      <label>PIN</label>
+      <input type="password" id="pinSetupInput" placeholder="At least 4 characters">
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>Confirm PIN</label>
+        <input type="password" id="pinSetupConfirmInput" placeholder="Re-enter the PIN">
+      </div>
+    </div>
+    <div class="modal-error hidden" id="pinSetupError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="pinSetupCancel">Cancel</button>
+      <button class="btn btn-primary" id="pinSetupConfirm">Enable</button>
+    </div>
+  </div>
+</div>
+
+<!-- toast notifications -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

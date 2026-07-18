@@ -1,0 +1,14 @@
+# Keep the Docker build context small and fast.
+# Build artefacts and dependencies are regenerated inside the container.
+
+src-tauri/target/
+dist/
+node_modules/
+src-tauri/gen/
+
+.git/
+.gitignore
+.DS_Store
+
+# The docker folder itself does not need to be inside the image.
+docker/

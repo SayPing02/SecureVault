@@ -1,0 +1,55 @@
+[package]
+name = "securevault"
+version = "0.1.0"
+description = "Secure file storage using Shamir Secret Sharing and AES-256-GCM"
+authors = ["Student Developer"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "securevault_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tauri + plugins
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-biometry = "0.2"
+
+# serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# crypto
+aes-gcm            = "0.10"
+chacha20poly1305   = "0.10"
+argon2             = "0.5"
+pbkdf2             = "0.12"
+sha2               = "0.10"
+rand               = "0.8"
+zeroize            = "1"
+
+# utilities
+base64 = "0.22"
+uuid   = { version = "1", features = ["v4"] }
+zip    = { version = "2.2", default-features = false, features = ["deflate"] }
+dirs   = "5"
+thiserror = "1"
+rayon  = "1"
+flate2 = "1"
+reed-solomon-erasure = "6"
+# standalone native message box for startup failures where no window exists yet
+rfd    = "0.16"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
