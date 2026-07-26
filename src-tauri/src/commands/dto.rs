@@ -40,6 +40,29 @@ pub struct VaultFileDto {
     pub created_at: u64,
     pub is_large: bool,
     pub fragment_labels: HashMap<u8, String>,
+    pub pinned: bool,
+    pub last_rotated_at: u64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityEntryDto {
+    pub timestamp: u64,
+    pub action: String,
+    pub filename: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupImportResultDto {
+    pub files_restored: u32,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CipherRecommendationDto {
+    pub cipher: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Serialize)]

@@ -21,22 +21,26 @@
 
 use crate::core::crypto;
 use crate::core::error::{CoreError, CoreResult};
-use crate::core::model::{Fragment, Manifest};
+use crate::core::model::{ActivityLog, Fragment, Manifest};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::Zeroize;
 
 const VAULT_DIR_NAME: &str = "vault";
 const MANIFEST_NAME: &str = "manifest.json.enc";
 const APP_SECRET_NAME: &str = "app.secret";
+const ACTIVITY_LOG_NAME: &str = "activity_log.json.enc";
 
 pub struct Storage {
     vault_dir: PathBuf,
     at_rest_key: [u8; crypto::KEY_LEN],
     // Serialises concurrent manifest read+write pairs; fragment writes need no lock.
     manifest_lock: Mutex<()>,
+    // Same, for the activity log.
+    activity_lock: Mutex<()>,
 }
 
 impl Storage {
@@ -65,6 +69,7 @@ impl Storage {
             vault_dir,
             at_rest_key,
             manifest_lock: Mutex::new(()),
+            activity_lock: Mutex::new(()),
         })
     }
 
@@ -83,6 +88,45 @@ impl Storage {
         let path = self.vault_dir.join(MANIFEST_NAME);
         let json = serde_json::to_vec_pretty(manifest)?;
         self.write_encrypted(&path, &json)
+    }
+
+    pub fn load_activity_log(&self) -> CoreResult<ActivityLog> {
+        let _guard = self.activity_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let path = self.vault_dir.join(ACTIVITY_LOG_NAME);
+        if !path.exists() {
+            return Ok(ActivityLog::default());
+        }
+        let plaintext = self.read_encrypted(&path)?;
+        Ok(serde_json::from_slice(&plaintext)?)
+    }
+
+    pub fn save_activity_log(&self, log: &ActivityLog) -> CoreResult<()> {
+        let _guard = self.activity_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let path = self.vault_dir.join(ACTIVITY_LOG_NAME);
+        let json = serde_json::to_vec_pretty(log)?;
+        self.write_encrypted(&path, &json)
+    }
+
+    /// Best-effort: append one line to the activity log. Never propagates a
+    /// failure to the caller — a logging hiccup shouldn't fail the actual
+    /// operation (add/download/share/delete) that triggered it.
+    pub fn log_activity(&self, action: &str, filename: &str) {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        let mut log = match self.load_activity_log() {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("SecureVault: could not load activity log: {e}");
+                return;
+            }
+        };
+        log.record(action, filename, timestamp);
+        if let Err(e) = self.save_activity_log(&log) {
+            eprintln!("SecureVault: could not save activity log: {e}");
+        }
     }
 
     // Each fragment file has a unique name so this is safe to call concurrently
@@ -278,6 +322,8 @@ mod tests {
             created_at: 0,
             is_large: false,
             fragment_labels: Default::default(),
+            pinned: Default::default(),
+            last_rotated_at: Default::default(),
         });
         storage.save_manifest(&manifest).unwrap();
 
@@ -335,6 +381,8 @@ mod tests {
             created_at: 0,
             is_large: false,
             fragment_labels: Default::default(),
+            pinned: Default::default(),
+            last_rotated_at: Default::default(),
         });
         storage.save_manifest(&manifest).unwrap();
 

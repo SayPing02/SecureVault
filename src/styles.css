@@ -147,29 +147,36 @@
   }
 
   /* ── MAIN LAYOUT ── */
-  .app {
+  .app-shell {
     position: relative;
     z-index: 1;
-    max-width: 1100px;
+    display: flex;
+    align-items: flex-start;
+    max-width: 1280px;
     margin: 0 auto;
+  }
+
+  .app {
+    flex: 1;
+    min-width: 0;
     padding: 40px 24px;
   }
 
-  /* ── TABS ── */
-  .tabs {
+  /* ── SIDEBAR ── */
+  .sidebar {
+    flex-shrink: 0;
+    width: 208px;
     display: flex;
-    gap: 4px;
-    margin-bottom: 32px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    width: fit-content;
-    max-width: 100%;
+    flex-direction: column;
+    gap: 2px;
+    padding: 32px 12px;
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
   }
 
   .tab {
-    padding: 10px 24px;
+    padding: 10px 14px;
     border-radius: 8px;
     font-family: var(--sans);
     font-size: 14px;
@@ -181,18 +188,18 @@
     transition: all 0.15s;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
+    text-align: left;
     white-space: nowrap;
   }
 
-  .tab:hover { color: var(--text); }
-  .tab:active { transform: scale(0.96); }
+  .tab:hover { color: var(--text); background: var(--surface2); }
+  .tab:active { transform: scale(0.98); }
 
   .tab.active {
     background: var(--surface3);
     color: var(--accent);
-    box-shadow: 0 0 0 1px var(--border2);
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .tab-icon { font-size: 16px; }
@@ -565,6 +572,8 @@
     line-height: 1.8;
   }
 
+  .activity-console { height: 420px; }
+
   .log-line { display: flex; gap: 12px; }
   .log-time { color: var(--text3); flex-shrink: 0; }
   .log-msg.info { color: var(--text2); }
@@ -722,6 +731,8 @@
   .vault-list { display: flex; flex-direction: column; gap: 10px; }
 
   .vault-item {
+    position: relative;
+    z-index: 0;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -733,6 +744,13 @@
     transition: all 0.2s;
     cursor: pointer;
   }
+  /* While a row's "···" menu is open, lift the whole row above its
+     siblings — otherwise a later row (or one mid-hover, which gets its
+     own stacking context via `transform`) can paint over an earlier
+     row's open dropdown even though the dropdown itself has a high
+     z-index, because that z-index is only compared within the
+     stacking context of its own row. */
+  .vault-item.menu-open { z-index: 30; }
   .vault-item:hover {
     border-color: var(--accent);
     background: rgba(123,141,217,0.04);
@@ -778,6 +796,52 @@
   }
 
   .vault-item-actions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; justify-content: flex-end; max-width: 100%; }
+
+  /* Per-file "···" actions menu — keeps Pin/Download/Share/Labels/Delete
+     out of the row so it doesn't turn into a wall of buttons.
+     The dropdown anchors to .vault-item (position: relative, set above),
+     not to this small trigger wrapper — anchoring "right: 0" to a
+     42px-wide trigger near the edge of a narrow row could push the
+     dropdown off-screen to the left; the full-width row always has room. */
+  .item-menu { position: static; }
+  .item-menu-trigger {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .item-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 150px;
+    padding: 6px;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+  }
+  .item-menu-option {
+    text-align: left;
+    padding: 9px 10px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .item-menu-option:hover { background: var(--surface2); }
+  .item-menu-option.danger { color: var(--danger); }
+  .item-menu-option.danger:hover { background: rgba(192,104,95,0.12); }
 
   .vault-item-progress { margin-top: 8px; }
   .vault-item-progress .progress-wrap { margin: 0 0 4px; }
@@ -838,6 +902,35 @@
     border-radius: 4px;
     letter-spacing: 0.5px;
     flex-shrink: 0;
+  }
+
+  .pinned-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  /* Reminder badge — fragments haven't been rotated in a while. Advisory
+     only, never blocks anything (see ROTATION_STALE_DAYS in main.js). */
+  .stale-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .vault-item.pinned {
+    border-color: var(--border2);
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   /* ── MODAL (password prompt) ── */
@@ -1108,6 +1201,56 @@
     font-weight: 700;
   }
 
+  /* ── Cipher selection: collapsed (default) recommendation row ─────────
+     Shown instead of the full card grid until the user asks to change it —
+     most people never need to think about cipher choice at all. */
+  .cipher-collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(123,141,217, 0.07);
+    border: 1px solid var(--accent);
+  }
+
+  .cipher-collapsed-info { min-width: 0; }
+
+  .cipher-collapsed-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cipher-collapsed-name {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .cipher-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .cipher-collapsed-reason {
+    font-size: 0.72rem;
+    color: var(--text2);
+    line-height: 1.4;
+    margin-top: 4px;
+  }
+
   /* ── Cipher selection cards ─────────────────────────────────────────── */
   .cipher-grid {
     display: grid;
@@ -1222,8 +1365,21 @@
     header { padding: 16px; }
     .app { padding: 20px 16px; }
 
-    .tabs { width: 100%; }
-    .tab { flex: 1 1 0; padding: 10px 8px; font-size: 13px; }
+    /* Sidebar collapses back to a horizontal bar — a fixed-width side
+       column doesn't leave enough room for content on a narrow screen. */
+    .app-shell { flex-direction: column; }
+    .sidebar {
+      width: 100%;
+      flex-direction: row;
+      gap: 4px;
+      padding: 10px 16px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      position: static;
+      overflow-x: auto;
+    }
+    .tab { flex: 1 1 0; padding: 10px 8px; font-size: 13px; justify-content: center; }
+    .tab.active { box-shadow: inset 0 -2px 0 var(--accent); }
 
     .vault-item { flex-wrap: wrap; }
     .vault-item-body { min-width: 160px; }

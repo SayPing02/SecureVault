@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 
@@ -30,12 +30,36 @@ function fmtDate(unixSeconds) {
   });
 }
 
+// Date + time, for the activity log (fmtDate alone doesn't distinguish
+// same-day entries).
+function fmtDateTime(unixSeconds) {
+  const d = new Date(unixSeconds * 1000);
+  const date = d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
+
 // Rough time estimate: AES enc ~100 MB/s + writing N encrypted copies at ~100 MB/s
 function estimateSplitMs(sizeBytes, totalFragments) {
   const mb = sizeBytes / (1024 * 1024);
   const encMs = (mb / 100) * 1000;
   const writeMs = (mb * totalFragments / 100) * 1000;
   return Math.max(300, Math.round(encMs + writeMs));
+}
+
+// Rotation is considered stale past this many days — just a nudge, not
+// enforced (see the in-app discussion: offline expiry can't be enforced by
+// a local clock, so this is a reminder, never a block).
+const ROTATION_STALE_DAYS = 180;
+
+function fmtRotationAge(unixSeconds) {
+  const days = Math.floor((Date.now() / 1000 - unixSeconds) / 86400);
+  if (days < 1) return "today";
+  if (days < 31) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
 function fmtDuration(ms) {
@@ -88,6 +112,7 @@ function switchTab(tabName) {
 
   if (tabName === "vault") refreshVault();
   if (tabName === "settings") refreshSecurityStatus();
+  if (tabName === "activity") refreshActivityLog();
 }
 
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -254,12 +279,48 @@ document.getElementById("threshold").addEventListener("input", () => {
   updateThresholdVisual();
 });
 
-// Cipher card selection
-document.querySelectorAll(".cipher-card").forEach((card) => {
-  card.addEventListener("click", () => {
-    document.querySelectorAll(".cipher-card").forEach((c) => c.classList.remove("selected"));
+// Cipher selection: collapsed recommendation row by default, full card grid
+// only once the user asks to "Change" it. See applyCipherChoice() below.
+let lastRecommendedCipher = "aes256gcm";
+
+async function showCipherRecommendation(fileSize) {
+  try {
+    const rec = await invoke("recommend_cipher", { fileSize });
+    lastRecommendedCipher = rec.cipher;
+    applyCipherChoice(rec.cipher, rec.reason);
+  } catch (err) {
+    // Non-critical — leave whichever cipher is already selected.
+  }
+}
+
+function applyCipherChoice(cipherValue, reasonText) {
+  document.querySelectorAll(".cipher-card").forEach((c) => c.classList.remove("selected"));
+  const card = document.querySelector(`.cipher-card[data-value="${cipherValue}"]`);
+  if (card) {
     card.classList.add("selected");
     card.querySelector("input[type=radio]").checked = true;
+  }
+
+  const isRecommended = cipherValue === lastRecommendedCipher;
+  document.getElementById("cipherCollapsedName").textContent =
+    card ? card.querySelector(".cipher-name").textContent : cipherValue;
+  document.getElementById("cipherCollapsedReason").textContent =
+    reasonText ?? (card ? card.querySelector(".cipher-desc").textContent : "");
+  document.querySelector("#cipherCollapsed .cipher-badge").textContent =
+    isRecommended ? "Recommended" : "Selected";
+
+  document.getElementById("cipherCollapsed").classList.remove("hidden");
+  document.getElementById("cipherGrid").classList.add("hidden");
+}
+
+document.getElementById("cipherChangeBtn").addEventListener("click", () => {
+  document.getElementById("cipherCollapsed").classList.add("hidden");
+  document.getElementById("cipherGrid").classList.remove("hidden");
+});
+
+document.querySelectorAll(".cipher-card").forEach((card) => {
+  card.addEventListener("click", () => {
+    applyCipherChoice(card.dataset.value, null);
   });
 });
 
@@ -314,6 +375,8 @@ function updatePasswordHint() {
     hint.textContent = "Password length OK";
     hint.className = "password-hint ok";
   }
+
+  document.getElementById("kdfSection").classList.toggle("hidden", pw.length === 0);
 }
 
 document.getElementById("splitPassword").addEventListener("input", updatePasswordHint);
@@ -375,6 +438,7 @@ document.getElementById("splitDropZone").addEventListener("click", async () => {
     splitFileSize = await invoke("get_file_size", { filePath: splitFilePath });
     await updateSplitEstimate();
     showRecommendBanner(splitFileSize);
+    await showCipherRecommendation(splitFileSize);
     logTo("splitConsole", `Size: ${fmtBytes(splitFileSize)}`, "info");
   } catch (err) {
     logTo("splitConsole", `Could not read file size: ${err}`, "warn");
@@ -527,6 +591,8 @@ function resetSplit() {
   document.getElementById("splitFileInfoBar").classList.add("hidden");
   document.getElementById("splitLargeFileWarning").classList.add("hidden");
   document.getElementById("splitRecommendBanner").classList.add("hidden");
+  lastRecommendedCipher = "aes256gcm";
+  applyCipherChoice("aes256gcm", "Industry-standard, hardware-accelerated on most devices.");
 }
 
 // --- vault tab ---
@@ -568,9 +634,10 @@ function renderVaultList() {
   }
 
   const query = document.getElementById("vaultSearchInput").value.trim().toLowerCase();
-  const files = query
+  const files = (query
     ? vaultFiles.filter((f) => f.filename.toLowerCase().includes(query))
-    : vaultFiles;
+    : vaultFiles
+  ).slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
   if (files.length === 0) {
     list.innerHTML = `
@@ -584,23 +651,30 @@ function renderVaultList() {
 
   for (const file of files) {
     const item = document.createElement("div");
-    item.className = "vault-item";
+    item.className = "vault-item" + (file.pinned ? " pinned" : "");
 
     const lock = file.passwordProtected
       ? `<span class="lock-badge">LOCKED</span>` : "";
+    const pinnedBadge = file.pinned
+      ? `<span class="pinned-badge">PINNED</span>` : "";
+    const rotatedAt = file.lastRotatedAt || file.createdAt;
+    const isStale = (Date.now() / 1000 - rotatedAt) > ROTATION_STALE_DAYS * 86400;
+    const staleBadge = isStale ? `<span class="stale-badge">ROTATE?</span>` : "";
     const ext = (file.filename.split(".").pop() || "file").slice(0, 4).toUpperCase();
     const labelCount = Object.keys(file.fragmentLabels || {}).length;
     const labelsBtnText = labelCount > 0 ? `Labels (${labelCount})` : "Labels";
+    const pinBtnText = file.pinned ? "Unpin" : "Pin";
 
     item.innerHTML = `
       <div class="vault-item-icon">${ext}</div>
       <div class="vault-item-body">
         <div class="vault-item-name">
-          <span class="vault-item-filename" title="${file.filename}">${file.filename}</span>${lock}
+          <span class="vault-item-filename" title="${file.filename}">${file.filename}</span>${lock}${pinnedBadge}${staleBadge}
         </div>
         <div class="vault-item-meta">
           ${fmtBytes(file.size)} · ${file.totalFragments} fragments ·
-          threshold ${file.threshold} · Created ${fmtDate(file.createdAt)}
+          threshold ${file.threshold} · Created ${fmtDate(file.createdAt)} ·
+          Rotated ${fmtRotationAge(rotatedAt)}
         </div>
         <div class="vault-item-progress hidden" data-role="progress">
           <div class="progress-wrap">
@@ -616,23 +690,63 @@ function renderVaultList() {
         </div>
       </div>
       <div class="vault-item-actions">
-        <button class="icon-btn" title="Download" data-action="download">Download</button>
-        <button class="icon-btn" title="Share" data-action="share">Share</button>
-        <button class="icon-btn" title="Fragment destinations" data-action="labels">${labelsBtnText}</button>
-        <button class="icon-btn danger" title="Delete" data-action="delete">Delete</button>
+        <div class="item-menu">
+          <button class="icon-btn item-menu-trigger" title="More actions" data-action="menu">⋯</button>
+          <div class="item-menu-dropdown hidden">
+            <button class="item-menu-option" data-action="pin">${pinBtnText}</button>
+            <button class="item-menu-option" data-action="download">Download</button>
+            <button class="item-menu-option" data-action="share">Share</button>
+            <button class="item-menu-option" data-action="labels">${labelsBtnText}</button>
+            <button class="item-menu-option" data-action="rotate">Rotate Fragments</button>
+            <button class="item-menu-option danger" data-action="delete">Delete</button>
+          </div>
+        </div>
       </div>`;
 
-    const dlBtn = item.querySelector('[data-action="download"]');
-    const shareBtn = item.querySelector('[data-action="share"]');
-    const labelsBtn = item.querySelector('[data-action="labels"]');
-    dlBtn.addEventListener("click", (e) => { e.stopPropagation(); downloadFile(file, item); });
-    shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareFile(file, item); });
-    labelsBtn.addEventListener("click", (e) => { e.stopPropagation(); openLabelsModal(file); });
+    const menuBtn = item.querySelector('[data-action="menu"]');
+    const dropdown = item.querySelector(".item-menu-dropdown");
+    menuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wasOpen = !dropdown.classList.contains("hidden");
+      closeAllItemMenus();
+      if (!wasOpen) {
+        dropdown.classList.remove("hidden");
+        item.classList.add("menu-open");
+      }
+    });
+
+    item.querySelector('[data-action="pin"]')
+      .addEventListener("click", (e) => { e.stopPropagation(); closeAllItemMenus(); toggleFilePinned(file); });
+    item.querySelector('[data-action="download"]')
+      .addEventListener("click", (e) => { e.stopPropagation(); closeAllItemMenus(); downloadFile(file, item); });
+    item.querySelector('[data-action="share"]')
+      .addEventListener("click", (e) => { e.stopPropagation(); closeAllItemMenus(); shareFile(file, item); });
+    item.querySelector('[data-action="labels"]')
+      .addEventListener("click", (e) => { e.stopPropagation(); closeAllItemMenus(); openLabelsModal(file); });
+    item.querySelector('[data-action="rotate"]')
+      .addEventListener("click", (e) => { e.stopPropagation(); closeAllItemMenus(); rotateFile(file); });
     item.querySelector('[data-action="delete"]')
-      .addEventListener("click", (e) => { e.stopPropagation(); deleteFile(file); });
+      .addEventListener("click", (e) => { e.stopPropagation(); closeAllItemMenus(); deleteFile(file); });
     item.addEventListener("click", () => openFragmentPreview(file));
 
     list.appendChild(item);
+  }
+}
+
+function closeAllItemMenus() {
+  document.querySelectorAll(".item-menu-dropdown").forEach((el) => el.classList.add("hidden"));
+  document.querySelectorAll(".vault-item.menu-open").forEach((el) => el.classList.remove("menu-open"));
+}
+document.addEventListener("click", closeAllItemMenus);
+
+async function toggleFilePinned(file) {
+  const wantPinned = !file.pinned;
+  try {
+    await invoke("set_file_pinned", { fileId: file.fileId, pinned: wantPinned });
+    file.pinned = wantPinned;
+    renderVaultList();
+  } catch (err) {
+    toast("Could not update pin: " + err, "err");
   }
 }
 
@@ -779,6 +893,30 @@ async function shareFile(file, item) {
     unlisten();
     if (btn) { btn.disabled = false; btn.textContent = "Share"; }
     setTimeout(() => hideItemProgress(item), 1200);
+  }
+}
+
+async function rotateFile(file) {
+  if (!window.confirm(
+    `Rotate "${file.filename}"? This creates a brand-new set of fragments — ` +
+    `any old fragments still out there (USB drives, shared copies, etc.) will stop working immediately.`
+  )) return;
+
+  try {
+    if (file.passwordProtected) {
+      const confirmed = await askPassword(
+        "Confirm Password",
+        `Enter the password for "${file.filename}" to rotate its fragments.`,
+        (pw) => invoke("rotate_vault_file", { fileId: file.fileId, password: pw }).then(() => true)
+      );
+      if (confirmed === null) return;
+    } else {
+      await invoke("rotate_vault_file", { fileId: file.fileId, password: null });
+    }
+    toast(`"${file.filename}" rotated — old fragments are now invalid`, "ok");
+    refreshVault();
+  } catch (err) {
+    toast("Rotation failed: " + err, "err");
   }
 }
 
@@ -1168,6 +1306,7 @@ async function setupDragDrop() {
           splitFileSize = await invoke("get_file_size", { filePath });
           await updateSplitEstimate();
           showRecommendBanner(splitFileSize);
+          await showCipherRecommendation(splitFileSize);
           logTo("splitConsole", `Size: ${fmtBytes(splitFileSize)}`, "info");
         } catch (err) {
           logTo("splitConsole", `Could not read file size: ${err}`, "warn");
@@ -1193,6 +1332,56 @@ async function setupDragDrop() {
   }
 }
 
+// --- activity log ---
+
+const ACTIVITY_LABELS = {
+  added: "Added",
+  downloaded: "Downloaded",
+  shared: "Shared",
+  deleted: "Deleted",
+  reconstructed: "Reconstructed",
+};
+const ACTIVITY_STYLES = {
+  added: "ok",
+  reconstructed: "ok",
+  deleted: "err",
+  shared: "accent",
+  downloaded: "info",
+};
+
+async function refreshActivityLog() {
+  const list = document.getElementById("activityList");
+  try {
+    const entries = await invoke("get_activity_log");
+    if (entries.length === 0) {
+      list.innerHTML = `<div class="log-line"><span class="log-msg info">No activity yet.</span></div>`;
+      return;
+    }
+    list.innerHTML = entries.map((e) => {
+      const label = ACTIVITY_LABELS[e.action] || e.action;
+      const style = ACTIVITY_STYLES[e.action] || "info";
+      return `<div class="log-line">
+        <span class="log-time">${fmtDateTime(e.timestamp)}</span>
+        <span class="log-msg ${style}">${label} "${e.filename}"</span>
+      </div>`;
+    }).join("");
+  } catch (err) {
+    list.innerHTML = `<div class="log-line"><span class="log-msg err">Could not load activity: ${err}</span></div>`;
+  }
+}
+
+document.getElementById("btnClearActivity").addEventListener("click", async () => {
+  if (!window.confirm("Clear the activity log? This cannot be undone."))
+    return;
+  try {
+    await invoke("clear_activity_log");
+    toast("Activity log cleared", "ok");
+    await refreshActivityLog();
+  } catch (err) {
+    toast("Could not clear activity log: " + err, "err");
+  }
+});
+
 // --- security / app lock settings ---
 
 async function refreshSecurityStatus() {
@@ -1200,6 +1389,8 @@ async function refreshSecurityStatus() {
   const bioHint = document.getElementById("biometricToggleHint");
   const pinToggle = document.getElementById("pinToggle");
   const pinHint = document.getElementById("pinToggleHint");
+  const autoLockSelect = document.getElementById("autoLockSelect");
+  const autoLockHint = document.getElementById("autoLockHint");
 
   try {
     const status = await invoke("security_status");
@@ -1231,13 +1422,35 @@ async function refreshSecurityStatus() {
       pinToggle.disabled = false;
       pinToggle.checked = status.pinEnabled;
     }
+
+    const lockActive = status.biometricEnabled || status.pinEnabled;
+    autoLockSelect.disabled = !lockActive;
+    autoLockSelect.value = String(status.autoLockMinutes ?? 0);
+    autoLockHint.textContent = lockActive
+      ? "Re-lock automatically after inactivity."
+      : "Set up Touch ID or a PIN first.";
+    setIdleTimeoutMinutes(lockActive ? status.autoLockMinutes : 0);
   } catch (err) {
     bioHint.textContent = "Could not check device support.";
     bioToggle.disabled = true;
     pinHint.textContent = "Could not check status.";
     pinToggle.disabled = true;
+    autoLockSelect.disabled = true;
   }
 }
+
+document.getElementById("autoLockSelect").addEventListener("change", async (e) => {
+  const select = e.target;
+  const minutes = parseInt(select.value);
+  try {
+    await invoke("set_auto_lock_minutes", { minutes });
+    setIdleTimeoutMinutes(minutes);
+    toast(minutes === 0 ? "Auto-lock turned off" : `Auto-lock set to ${minutes} min`, "ok");
+  } catch (err) {
+    toast("Could not update auto-lock: " + err, "err");
+    await refreshSecurityStatus();
+  }
+});
 
 document.getElementById("biometricToggle").addEventListener("change", async (e) => {
   const toggle = e.target;
@@ -1342,6 +1555,223 @@ document.getElementById("pinToggle").addEventListener("change", async (e) => {
   }
 });
 
+// --- vault backup / restore ---
+
+const MIN_BACKUP_PASSWORD_LENGTH = 8;
+
+function askBackupPassword() {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("backupPasswordModal");
+    const pwInput = document.getElementById("backupPasswordInput");
+    const confirmInput = document.getElementById("backupPasswordConfirmInput");
+    const errorEl = document.getElementById("backupPasswordError");
+
+    pwInput.value = "";
+    confirmInput.value = "";
+    errorEl.classList.add("hidden");
+    overlay.classList.remove("hidden");
+    pwInput.focus();
+
+    const cleanup = () => {
+      overlay.classList.add("hidden");
+      errorEl.classList.add("hidden");
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+    };
+    const onCancel = () => { cleanup(); resolve(null); };
+
+    const onConfirm = () => {
+      const pw = pwInput.value;
+      const confirm = confirmInput.value;
+      if (pw.length < MIN_BACKUP_PASSWORD_LENGTH) {
+        errorEl.textContent = `Backup password must be at least ${MIN_BACKUP_PASSWORD_LENGTH} characters`;
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      if (pw !== confirm) {
+        errorEl.textContent = "Passwords don't match";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      cleanup();
+      resolve(pw);
+    };
+
+    const confirmBtn = document.getElementById("backupPasswordConfirm");
+    const cancelBtn = document.getElementById("backupPasswordCancel");
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+  });
+}
+
+document.getElementById("backupExportBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("backupExportBtn");
+  const password = await askBackupPassword();
+  if (password === null) return;
+
+  const destinationPath = await save({
+    title: "Save Vault Backup",
+    defaultPath: "securevault-backup.svbackup",
+    filters: [{ name: "SecureVault Backup", extensions: ["svbackup"] }],
+  });
+  if (!destinationPath) return;
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "Backing up…";
+  try {
+    await invoke("export_vault_backup", { password, destinationPath });
+    toast("Vault backed up successfully", "ok");
+  } catch (err) {
+    toast("Backup failed: " + err, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
+document.getElementById("backupImportBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("backupImportBtn");
+  const sourcePath = await open({
+    title: "Choose a Vault Backup",
+    multiple: false,
+    filters: [{ name: "SecureVault Backup", extensions: ["svbackup"] }],
+  });
+  if (!sourcePath) return;
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "Restoring…";
+  try {
+    let restoredCount = 0;
+    const confirmed = await askPassword(
+      "Restore Vault",
+      "Enter the password for this backup.",
+      (pw) => invoke("import_vault_backup", { password: pw, sourcePath }).then((res) => {
+        restoredCount = res.filesRestored;
+        return true;
+      })
+    );
+    if (confirmed === null) return;
+    toast(`Restored ${restoredCount} file(s) from backup`, "ok");
+    await refreshVault();
+  } catch (err) {
+    toast("Restore failed: " + err, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
+// --- lock screen (shared between startup and the auto-lock idle timer) ---
+
+// Renders the lock screen for whichever method is active and wires up its
+// unlock control. Uses .onclick/.onkeydown (single-slot) rather than
+// addEventListener so calling this more than once — startup, then later
+// every time auto-lock fires — never stacks duplicate handlers.
+function showLockScreen(status, onUnlocked) {
+  document.getElementById("introScreen").classList.add("removed");
+
+  const lockScreen = document.getElementById("lockScreen");
+  const errorEl = document.getElementById("lockScreenError");
+  const pinRow = document.getElementById("lockScreenPinRow");
+  const pinInput = document.getElementById("lockScreenPinInput");
+  const bioBtn = document.getElementById("btnUnlockBiometric");
+  const pinBtn = document.getElementById("btnUnlockPin");
+
+  errorEl.classList.add("hidden");
+  lockScreen.classList.remove("fade-out", "removed", "hidden");
+  pinRow.classList.add("hidden");
+  bioBtn.classList.add("hidden");
+  pinInput.value = "";
+  pinInput.disabled = false;
+  bioBtn.disabled = false;
+  pinBtn.disabled = false;
+
+  const dismiss = async () => {
+    lockScreen.classList.add("fade-out");
+    setTimeout(() => lockScreen.classList.add("removed"), 550);
+    resetIdleTimer();
+    await onUnlocked();
+  };
+
+  if (status.pinEnabled) {
+    pinRow.classList.remove("hidden");
+    pinInput.focus();
+
+    const tryUnlock = async () => {
+      errorEl.classList.add("hidden");
+      pinBtn.disabled = true;
+      pinInput.disabled = true;
+      try {
+        await invoke("unlock_vault_with_pin", { pin: pinInput.value });
+        await dismiss();
+      } catch (err) {
+        errorEl.textContent = String(err);
+        errorEl.classList.remove("hidden");
+        pinBtn.disabled = false;
+        pinInput.disabled = false;
+        pinInput.select();
+      }
+    };
+    pinBtn.onclick = tryUnlock;
+    pinInput.onkeydown = (e) => { if (e.key === "Enter") tryUnlock(); };
+  } else {
+    bioBtn.classList.remove("hidden");
+    bioBtn.onclick = async () => {
+      errorEl.classList.add("hidden");
+      bioBtn.disabled = true;
+      try {
+        await invoke("unlock_vault_with_biometric");
+        await dismiss();
+      } catch (err) {
+        errorEl.textContent = String(err);
+        errorEl.classList.remove("hidden");
+      } finally {
+        bioBtn.disabled = false;
+      }
+    };
+  }
+}
+
+// --- auto-lock idle timer ---
+
+let idleTimeoutMinutes = 0;
+let idleLastActivity = Date.now();
+let idleCheckRunning = false;
+
+function setIdleTimeoutMinutes(minutes) {
+  idleTimeoutMinutes = minutes || 0;
+}
+
+function resetIdleTimer() {
+  idleLastActivity = Date.now();
+}
+
+["mousemove", "mousedown", "keydown", "wheel", "touchstart"].forEach((evt) => {
+  document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+
+setInterval(async () => {
+  if (!idleTimeoutMinutes || idleCheckRunning) return;
+  const lockScreenHidden = document.getElementById("lockScreen").classList.contains("hidden");
+  if (!lockScreenHidden) return; // already locked, nothing to do
+
+  const idleMs = Date.now() - idleLastActivity;
+  if (idleMs < idleTimeoutMinutes * 60 * 1000) return;
+
+  idleCheckRunning = true;
+  try {
+    await invoke("lock_vault");
+    const status = await invoke("security_status");
+    showLockScreen(status, refreshVault);
+  } catch {
+    // browser preview, or no lock method set up — nothing to do
+  } finally {
+    idleCheckRunning = false;
+  }
+}, 5000);
+
 // --- init ---
 
 updateThresholdVisual();
@@ -1374,57 +1804,5 @@ async function startApp() {
 
   // App Lock is on and the vault hasn't been unlocked yet this session —
   // skip straight to the lock screen instead of the intro animation.
-  document.getElementById("introScreen").classList.add("removed");
-  const lockScreen = document.getElementById("lockScreen");
-  const errorEl = document.getElementById("lockScreenError");
-  lockScreen.classList.remove("hidden");
-
-  const unlocked = async () => {
-    lockScreen.classList.add("fade-out");
-    setTimeout(() => lockScreen.classList.add("removed"), 550);
-    await startApp();
-  };
-
-  if (status.pinEnabled) {
-    const pinRow = document.getElementById("lockScreenPinRow");
-    const pinInput = document.getElementById("lockScreenPinInput");
-    const unlockBtn = document.getElementById("btnUnlockPin");
-    pinRow.classList.remove("hidden");
-    pinInput.focus();
-
-    const tryUnlock = async () => {
-      errorEl.classList.add("hidden");
-      unlockBtn.disabled = true;
-      pinInput.disabled = true;
-      try {
-        await invoke("unlock_vault_with_pin", { pin: pinInput.value });
-        await unlocked();
-      } catch (err) {
-        errorEl.textContent = String(err);
-        errorEl.classList.remove("hidden");
-        unlockBtn.disabled = false;
-        pinInput.disabled = false;
-        pinInput.select();
-      }
-    };
-    unlockBtn.addEventListener("click", tryUnlock);
-    pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") tryUnlock(); });
-  } else {
-    const unlockBtn = document.getElementById("btnUnlockBiometric");
-    unlockBtn.classList.remove("hidden");
-
-    unlockBtn.addEventListener("click", async () => {
-      errorEl.classList.add("hidden");
-      unlockBtn.disabled = true;
-      try {
-        await invoke("unlock_vault_with_biometric");
-        await unlocked();
-      } catch (err) {
-        errorEl.textContent = String(err);
-        errorEl.classList.remove("hidden");
-      } finally {
-        unlockBtn.disabled = false;
-      }
-    });
-  }
+  showLockScreen(status, startApp);
 })();
