@@ -2,16 +2,43 @@
 // Fields are camelCase on the JS side
 
 use serde::{Deserialize, Serialize};
+<<<<<<< HEAD
+=======
+use std::collections::HashMap;
+>>>>>>> origin/felix
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SplitRequest {
     pub file_path: String,
+<<<<<<< HEAD
     pub total_fragments: u8,
     pub threshold: u8,
     pub password: Option<String>,
 }
 
+=======
+    // User-editable display name to store the file under — defaults to the
+    // source file's own name when absent/blank.
+    #[serde(default)]
+    pub filename: Option<String>,
+    pub total_fragments: u8,
+    pub threshold: u8,
+    pub password: Option<String>,
+    #[serde(default)]
+    pub compress: bool,
+    #[serde(default = "default_cipher")]
+    pub cipher: String,
+    #[serde(default = "default_kdf")]
+    pub kdf: String,
+    #[serde(default)]
+    pub padding_pct: u8,
+}
+
+fn default_cipher() -> String { "aes256gcm".to_string() }
+fn default_kdf()    -> String { "standard".to_string() }
+
+>>>>>>> origin/felix
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultFileDto {
@@ -22,6 +49,34 @@ pub struct VaultFileDto {
     pub threshold: u8,
     pub password_protected: bool,
     pub created_at: u64,
+<<<<<<< HEAD
+=======
+    pub is_large: bool,
+    pub fragment_labels: HashMap<u8, String>,
+    pub pinned: bool,
+    pub last_rotated_at: u64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityEntryDto {
+    pub timestamp: u64,
+    pub action: String,
+    pub filename: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupImportResultDto {
+    pub files_restored: u32,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CipherRecommendationDto {
+    pub cipher: String,
+    pub reason: String,
+>>>>>>> origin/felix
 }
 
 #[derive(Debug, Serialize)]

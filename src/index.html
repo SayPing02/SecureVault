@@ -8,6 +8,7 @@
 </head>
 <body>
 
+<<<<<<< HEAD
 <div class="bg-glow bg-glow-1"></div>
 <div class="bg-glow bg-glow-2"></div>
 
@@ -30,6 +31,53 @@
       <span class="tab-icon">📥</span> Reconstruct
     </button>
   </div>
+=======
+<!-- ════════════════════════ INTRO / SPLASH SCREEN ════════════════════════ -->
+<div id="introScreen" class="intro-screen">
+  <div class="intro-content">
+    <img class="intro-logo" src="logo.png" alt="SecureVault logo">
+    <div class="intro-title">Secure<span>Vault</span></div>
+    <div class="intro-tagline">// Encrypted. Fragmented. Yours.</div>
+    <div class="intro-loader"><div class="intro-loader-bar"></div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════ LOCK SCREEN (biometric / PIN) ════════════════════════ -->
+<div id="lockScreen" class="intro-screen hidden">
+  <div class="intro-content">
+    <img class="intro-logo" src="logo.png" alt="SecureVault logo">
+    <div class="intro-title">Secure<span>Vault</span></div>
+    <div class="intro-tagline" id="lockScreenSub">// Vault locked</div>
+
+    <button class="btn btn-primary hidden" id="btnUnlockBiometric">Unlock</button>
+
+    <div id="lockScreenPinRow" class="lock-pin-row hidden">
+      <input type="password" id="lockScreenPinInput" placeholder="Enter PIN">
+      <button class="btn btn-primary" id="btnUnlockPin">Unlock</button>
+    </div>
+
+    <div class="modal-error hidden" id="lockScreenError"></div>
+  </div>
+</div>
+
+<header>
+  <img class="logo-icon" src="logo.png" alt="SecureVault logo">
+  <div class="logo-text">Secure<span>Vault</span></div>
+</header>
+
+<div class="app-shell">
+
+  <!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
+  <nav class="sidebar">
+    <button class="tab active" data-tab="vault">My Files</button>
+    <button class="tab" data-tab="split">Add File</button>
+    <button class="tab" data-tab="import">Reconstruct</button>
+    <button class="tab" data-tab="activity">Activity</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <div class="app">
+>>>>>>> origin/felix
 
   <!-- ════════════════════════ VAULT PANEL ════════════════════════ -->
   <div id="panel-vault" class="panel active">
@@ -37,20 +85,33 @@
     <div class="section-sub">// Files stored on your device</div>
 
     <div class="info-box">
+<<<<<<< HEAD
       <span class="info-box-icon">ℹ️</span>
       <span>Click a file to <strong>download</strong>, <strong>Share</strong> or delete.</span>
+=======
+      <span>Click a file to <strong>preview its fragments</strong>, or use the buttons to download, Share, or delete.</span>
+>>>>>>> origin/felix
     </div>
 
     <div class="card">
       <div class="card-title">Stored Files</div>
+<<<<<<< HEAD
+=======
+      <input type="text" id="vaultSearchInput" class="vault-search" placeholder="Search files by name…">
+>>>>>>> origin/felix
       <div id="vaultList" class="vault-list">
         <!-- populated by main.js -->
       </div>
     </div>
 
     <div class="btn-row">
+<<<<<<< HEAD
       <button class="btn btn-primary" data-goto="split">✂️ Add a New File</button>
       <button class="btn btn-secondary" id="btnRefreshVault">↺ Refresh</button>
+=======
+      <button class="btn btn-primary" data-goto="split">Add a New File</button>
+      <button class="btn btn-secondary" id="btnRefreshVault">Refresh</button>
+>>>>>>> origin/felix
     </div>
   </div>
 
@@ -60,7 +121,11 @@
     <div class="section-sub">// Store the file into device</div>
 
     <div class="info-box">
+<<<<<<< HEAD
       <span class="info-box-icon">ℹ️</span>
+=======
+      <span>Choose <strong>N</strong> (total fragments) and <strong>K</strong> (threshold) — any <strong>K</strong> of the <strong>N</strong> fragments can rebuild the file.</span>
+>>>>>>> origin/felix
     </div>
 
     <!-- File Select -->
@@ -68,12 +133,40 @@
       <div class="card-title">Select File</div>
       <div class="drop-zone" id="splitDropZone">
         <div id="splitDropContent">
+<<<<<<< HEAD
           <div class="drop-icon">📂</div>
+=======
+>>>>>>> origin/felix
           <div class="drop-text">Click to browse for a file</div>
           <div class="drop-sub">Any file type · stored locally</div>
         </div>
       </div>
       <div id="splitPickedFile" class="picked-file hidden"></div>
+<<<<<<< HEAD
+=======
+      <!-- shown after file is selected -->
+      <div id="splitFileNameRow" class="form-row single hidden">
+        <div>
+          <label>Stored As</label>
+          <input type="text" id="splitFileNameInput" placeholder="File name in the vault">
+        </div>
+      </div>
+      <div id="splitFileInfoBar" class="file-info-bar hidden">
+        <span id="splitFileSizeDisplay" class="file-info-item"></span>
+        <span class="info-sep">·</span>
+        <span id="splitVaultSpaceDisplay" class="file-info-item"></span>
+        <span class="info-sep">·</span>
+        <span id="splitTimeEstDisplay" class="file-info-item accent"></span>
+      </div>
+      <div id="splitLargeFileWarning" class="large-file-warning hidden">
+        Large file: each of the N fragments stores a full encrypted copy, so total vault usage equals N × file size.
+      </div>
+      <div id="splitRecommendBanner" class="recommend-banner hidden">
+        <span id="splitRecommendText"></span>
+        <button class="btn-recommend-apply" id="btnRecommendApply">Apply</button>
+        <button class="btn-recommend-dismiss" id="btnRecommendDismiss">Dismiss</button>
+      </div>
+>>>>>>> origin/felix
     </div>
 
     <!-- Config -->
@@ -82,11 +175,19 @@
       <div class="form-row triple">
         <div>
           <label>Total Fragments</label>
+<<<<<<< HEAD
           <input type="number" id="totalShares" min="2" max="10" value="5">
         </div>
         <div>
           <label>Minimum Threshold</label>
           <input type="number" id="threshold" min="2" max="5" value="3">
+=======
+          <input type="number" id="totalShares" min="2" value="5">
+        </div>
+        <div>
+          <label>Minimum Threshold</label>
+          <input type="number" id="threshold" min="2" value="3">
+>>>>>>> origin/felix
         </div>
         <!--<div>
           <label>Encryption</label>
@@ -100,12 +201,135 @@
         <div>
           <label>Password (optional)</label>
           <input type="password" id="splitPassword" placeholder="Leave blank for no password">
+<<<<<<< HEAD
+=======
+          <div class="password-hint" id="splitPasswordHint"></div>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="toggle-row">
+          <label class="toggle-label" for="splitCompress">
+            Compress before encrypting
+            <span class="toggle-hint">Shrinks text, documents and uncompressed images significantly. No benefit for already-compressed files (ZIP, MP4, JPG).</span>
+          </label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="splitCompress" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Cipher selection -->
+      <div class="form-row single">
+        <div>
+          <label>Encryption Cipher</label>
+
+          <!-- Default view: one recommended cipher, pre-selected. Most users
+               never need to open the full picker. -->
+          <div class="cipher-collapsed" id="cipherCollapsed">
+            <div class="cipher-collapsed-info">
+              <div class="cipher-collapsed-name-row">
+                <span class="cipher-collapsed-name" id="cipherCollapsedName">AES-256-GCM</span>
+                <span class="cipher-badge">Recommended</span>
+              </div>
+              <div class="cipher-collapsed-reason" id="cipherCollapsedReason">Industry-standard, hardware-accelerated on most devices.</div>
+            </div>
+            <button type="button" class="btn btn-secondary" id="cipherChangeBtn">Change</button>
+          </div>
+
+          <div class="cipher-grid hidden" id="cipherGrid">
+            <label class="cipher-card selected" data-value="aes256gcm">
+              <input type="radio" name="cipher" value="aes256gcm" checked hidden>
+              <div class="cipher-name">AES-256-GCM</div>
+              <div class="cipher-desc">Hardware-accelerated on modern CPUs. Industry standard.</div>
+            </label>
+            <label class="cipher-card" data-value="chacha20">
+              <input type="radio" name="cipher" value="chacha20" hidden>
+              <div class="cipher-name">ChaCha20-Poly1305</div>
+              <div class="cipher-desc">Faster on devices without AES hardware (ARM, older CPUs).</div>
+            </label>
+            <label class="cipher-card" data-value="xchacha20">
+              <input type="radio" name="cipher" value="xchacha20" hidden>
+              <div class="cipher-name">XChaCha20-Poly1305</div>
+              <div class="cipher-desc">Same as ChaCha20 but with a wider nonce — removes any theoretical risk from reusing a key many times.</div>
+            </label>
+            <label class="cipher-card" data-value="aesgcmsiv">
+              <input type="radio" name="cipher" value="aesgcmsiv" hidden>
+              <div class="cipher-name">AES-256-GCM-SIV</div>
+              <div class="cipher-desc">Nonce-misuse resistant — degrades safely instead of catastrophically if a nonce is ever repeated.</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Size obfuscation padding -->
+      <div class="form-row single">
+        <div>
+          <label>Size Obfuscation <span class="toggle-hint">Random padding added to hide the true file size inside each fragment.</span></label>
+          <div class="kdf-grid padding-grid" id="paddingGrid">
+            <label class="kdf-card selected" data-value="0">
+              <input type="radio" name="padding" value="0" checked hidden>
+              <div class="kdf-name">None</div>
+              <div class="kdf-meta">No overhead</div>
+            </label>
+            <label class="kdf-card" data-value="10">
+              <input type="radio" name="padding" value="10" hidden>
+              <div class="kdf-name">+10%</div>
+              <div class="kdf-meta">Low overhead</div>
+            </label>
+            <label class="kdf-card" data-value="25">
+              <input type="radio" name="padding" value="25" hidden>
+              <div class="kdf-name">+25%</div>
+              <div class="kdf-meta">Moderate</div>
+            </label>
+            <label class="kdf-card" data-value="50">
+              <input type="radio" name="padding" value="50" hidden>
+              <div class="kdf-name">+50%</div>
+              <div class="kdf-meta">Strong cover</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- KDF selection — only meaningful once a password is set, so it
+           stays hidden until the password field has something in it. -->
+      <div class="form-row single hidden" id="kdfSection">
+        <div>
+          <label>Password Key Strength</label>
+          <div class="kdf-grid" id="kdfGrid">
+            <label class="kdf-card" data-value="fast">
+              <input type="radio" name="kdf" value="fast" hidden>
+              <div class="kdf-name">Fast</div>
+              <div class="kdf-meta">~10 ms · PBKDF2 10k</div>
+            </label>
+            <label class="kdf-card selected" data-value="standard">
+              <input type="radio" name="kdf" value="standard" checked hidden>
+              <div class="kdf-name">Standard</div>
+              <div class="kdf-meta">~100 ms · PBKDF2 100k</div>
+            </label>
+            <label class="kdf-card" data-value="strong">
+              <input type="radio" name="kdf" value="strong" hidden>
+              <div class="kdf-name">Strong</div>
+              <div class="kdf-meta">~1 s · PBKDF2 1M</div>
+            </label>
+            <label class="kdf-card" data-value="argon2id">
+              <input type="radio" name="kdf" value="argon2id" hidden>
+              <div class="kdf-name">Argon2id</div>
+              <div class="kdf-meta">~1-2 s · 64 MB RAM · best</div>
+            </label>
+          </div>
+>>>>>>> origin/felix
         </div>
       </div>
 
       <!-- Threshold visual -->
       <div>
+<<<<<<< HEAD
         <label>Fragment Visualisation (🔵 = required · 🟢 = bonus)</label>
+=======
+        <label>Fragment Visualisation (filled = required · outlined = bonus)</label>
+>>>>>>> origin/felix
         <div class="threshold-visual" id="thresholdVisual"></div>
       </div>
     </div>
@@ -114,13 +338,27 @@
     <div class="card">
       <div class="card-title">Operation</div>
       <div class="btn-row">
+<<<<<<< HEAD
         <button class="btn btn-primary" id="btnSplit">✂️ Add to Vault</button>
         <button class="btn btn-secondary" id="btnSplitReset">↺ Reset</button>
+=======
+        <button class="btn btn-primary" id="btnSplit">Add to Vault</button>
+        <button class="btn btn-secondary hidden" id="btnSplitPause">Pause</button>
+        <button class="btn btn-secondary hidden" id="btnSplitCancel">Cancel</button>
+        <button class="btn btn-secondary" id="btnSplitReset">Reset</button>
+>>>>>>> origin/felix
       </div>
       <div class="progress-wrap hidden" id="splitProgress">
         <div class="progress-bar" id="splitProgressBar"></div>
       </div>
+<<<<<<< HEAD
       <div class="progress-label hidden" id="splitProgressLabel"></div>
+=======
+      <div class="progress-footer hidden" id="splitProgressFooter">
+        <span class="progress-label" id="splitProgressLabel"></span>
+        <span class="progress-time" id="splitTimeRemaining"></span>
+      </div>
+>>>>>>> origin/felix
     </div>
 
     <!-- Console -->
@@ -135,10 +373,16 @@
   <!-- ════════════════════════ IMPORT PANEL ════════════════════════ -->
   <div id="panel-import" class="panel">
     <div class="section-title">Reconstruct from Fragments</div>
+<<<<<<< HEAD
     <div class="section-sub">// Select individual .svf fragment files to reconstruct a file</div>
 
     <div class="info-box">
       <span class="info-box-icon">ℹ️</span>
+=======
+    <div class="section-sub">// Select individual .svf or .svf3 fragment files to reconstruct a file</div>
+
+    <div class="info-box">
+>>>>>>> origin/felix
       <span>Select <strong>individual fragment files</strong>.</span>
     </div>
 
@@ -146,9 +390,14 @@
       <div class="card-title">Select Fragment Files</div>
       <div class="drop-zone" id="importDropZone">
         <div id="importDropContent">
+<<<<<<< HEAD
           <div class="drop-icon">🧩</div>
           <div class="drop-text">Click to browse for fragment files</div>
           <div class="drop-sub">Select multiple .svf files</div>
+=======
+          <div class="drop-text">Click to browse for fragment files</div>
+          <div class="drop-sub">Select multiple .svf or .svf3 files</div>
+>>>>>>> origin/felix
         </div>
       </div>
       <div id="importPickedFiles" class="picked-file hidden"></div>
@@ -162,9 +411,24 @@
     <div class="card">
       <div class="card-title">Operation</div>
       <div class="btn-row">
+<<<<<<< HEAD
         <button class="btn btn-primary" id="btnImport">📥 Store</button>
         <button class="btn btn-secondary" id="btnImportAddMore">+ Add More Fragments</button>
         <button class="btn btn-secondary" id="btnImportReset">↺ Reset</button>
+=======
+        <button class="btn btn-primary" id="btnImport">Store</button>
+        <button class="btn btn-secondary hidden" id="btnImportPause">Pause</button>
+        <button class="btn btn-secondary hidden" id="btnImportCancel">Cancel</button>
+        <button class="btn btn-secondary" id="btnImportAddMore">+ Add More Fragments</button>
+        <button class="btn btn-secondary" id="btnImportReset">Reset</button>
+      </div>
+      <div class="progress-wrap hidden" id="importProgress">
+        <div class="progress-bar" id="importProgressBar"></div>
+      </div>
+      <div class="progress-footer hidden" id="importProgressFooter">
+        <span class="progress-label" id="importProgressLabel"></span>
+        <span class="progress-time" id="importTimeRemaining"></span>
+>>>>>>> origin/felix
       </div>
     </div>
 
@@ -176,7 +440,93 @@
     </div>
   </div>
 
+<<<<<<< HEAD
  
+=======
+  <!-- ════════════════════════ ACTIVITY PANEL ════════════════════════ -->
+  <div id="panel-activity" class="panel">
+    <div class="section-title">Activity</div>
+    <div class="section-sub">// History of vault actions on this device</div>
+
+    <div class="card">
+      <div class="card-title">Recent Activity</div>
+      <div id="activityList" class="console activity-console">
+        <!-- populated by main.js -->
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="btnClearActivity">Clear Activity Log</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════ SETTINGS PANEL ════════════════════════ -->
+  <div id="panel-settings" class="panel">
+    <div class="section-title">Settings</div>
+    <div class="section-sub">// App preferences and security</div>
+
+    <div class="card">
+      <div class="card-title">Security</div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <span id="biometricToggleLabel">Touch ID / Windows Hello</span>
+          <span class="toggle-hint" id="biometricToggleHint">
+            Checking device support…
+          </span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="biometricToggle" disabled>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-top: 18px;">
+        <div class="toggle-label">
+          <span>PIN Lock</span>
+          <span class="toggle-hint" id="pinToggleHint">
+            Optionally require a PIN to open SecureVault.
+          </span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="pinToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-top: 18px;">
+        <div class="toggle-label">
+          <span>Auto-Lock</span>
+          <span class="toggle-hint" id="autoLockHint">
+            Set up Touch ID or a PIN first.
+          </span>
+        </div>
+        <select id="autoLockSelect" disabled>
+          <option value="0">Never</option>
+          <option value="1">1 minute</option>
+          <option value="5">5 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-title">Backup &amp; Restore</div>
+      <div class="toggle-hint" style="margin-bottom: 14px;">
+        Your vault only exists on this device. Back it up to a file you can store
+        on a USB drive or cloud folder — protected by its own password, separate
+        from your PIN — so a disk failure doesn't mean losing everything.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="backupExportBtn">Back Up Vault…</button>
+        <button class="btn btn-secondary" id="backupImportBtn">Restore from Backup…</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+>>>>>>> origin/felix
 
 <!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
 <div id="passwordModal" class="modal-overlay hidden">
@@ -187,6 +537,10 @@
       <label>Password</label>
       <input type="password" id="modalPasswordInput" placeholder="Enter the file password">
     </div>
+<<<<<<< HEAD
+=======
+    <div class="modal-error hidden" id="modalError">Incorrect password</div>
+>>>>>>> origin/felix
     <div class="modal-actions">
       <button class="btn btn-secondary" id="modalCancel">Cancel</button>
       <button class="btn btn-primary" id="modalConfirm">Confirm</button>
@@ -194,6 +548,100 @@
   </div>
 </div>
 
+<<<<<<< HEAD
+=======
+<!-- ════════════════════════ SHARE ZIP NAME MODAL ════════════════════════ -->
+<div id="zipNameModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Name the Share File</div>
+    <div class="modal-sub" id="zipNameModalSub">Choose a name for the exported zip.</div>
+    <div>
+      <label>File Name</label>
+      <input type="text" id="zipNameInput" placeholder="e.g. report-share">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="zipNameCancel">Cancel</button>
+      <button class="btn btn-primary" id="zipNameConfirm">Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ FRAGMENT LABELS MODAL ════════════════════════ -->
+<div id="labelsModal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <div class="modal-title">Fragment Destinations</div>
+    <div class="modal-sub" id="labelsModalSub">Note where each fragment went — for your own reference only.</div>
+    <div class="labels-list" id="labelsList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="labelsCancel">Cancel</button>
+      <button class="btn btn-primary" id="labelsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ FRAGMENT PREVIEW MODAL ════════════════════════ -->
+<div id="fragmentPreviewModal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="fragmentPreviewTitle">Fragment Preview</div>
+    <div class="modal-sub" id="fragmentPreviewSub"></div>
+    <div class="fragments-grid" id="fragmentPreviewGrid"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="fragmentPreviewClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ SET PIN MODAL ════════════════════════ -->
+<div id="pinSetupModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Set a PIN</div>
+    <div class="modal-sub">Required each time you open SecureVault.</div>
+    <div>
+      <label>PIN</label>
+      <input type="password" id="pinSetupInput" placeholder="At least 4 characters">
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>Confirm PIN</label>
+        <input type="password" id="pinSetupConfirmInput" placeholder="Re-enter the PIN">
+      </div>
+    </div>
+    <div class="modal-error hidden" id="pinSetupError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="pinSetupCancel">Cancel</button>
+      <button class="btn btn-primary" id="pinSetupConfirm">Enable</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ BACKUP PASSWORD MODAL ════════════════════════ -->
+<div id="backupPasswordModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Protect This Backup</div>
+    <div class="modal-sub">
+      Choose a password for this backup file — separate from your PIN. Anyone with
+      the file and this password can read everything in it, and there's no way to
+      recover it if you forget the password.
+    </div>
+    <div>
+      <label>Backup Password</label>
+      <input type="password" id="backupPasswordInput" placeholder="At least 8 characters">
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>Confirm Password</label>
+        <input type="password" id="backupPasswordConfirmInput" placeholder="Re-enter the password">
+      </div>
+    </div>
+    <div class="modal-error hidden" id="backupPasswordError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="backupPasswordCancel">Cancel</button>
+      <button class="btn btn-primary" id="backupPasswordConfirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+>>>>>>> origin/felix
 <!-- toast notifications -->
 <div class="toast-stack" id="toastStack"></div>
 

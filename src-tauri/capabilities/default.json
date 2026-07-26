@@ -6,6 +6,11 @@
   "permissions": [
     "core:default",
     "dialog:default",
+<<<<<<< HEAD
     "opener:default"
+=======
+    "opener:default",
+    "biometry:default"
+>>>>>>> origin/felix
   ]
 }

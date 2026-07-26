@@ -18,16 +18,31 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+<<<<<<< HEAD
+=======
+tauri-plugin-biometry = "0.2"
+>>>>>>> origin/felix
 
 # serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # crypto
+<<<<<<< HEAD
 aes-gcm = "0.10"
 pbkdf2  = "0.12"
 sha2    = "0.10"
 rand    = "0.8"
+=======
+aes-gcm            = "0.10"
+aes-gcm-siv        = "0.11"
+chacha20poly1305   = "0.10"
+argon2             = "0.5"
+pbkdf2             = "0.12"
+sha2               = "0.10"
+rand               = "0.8"
+zeroize            = "1"
+>>>>>>> origin/felix
 
 # utilities
 base64 = "0.22"
@@ -35,6 +50,14 @@ uuid   = { version = "1", features = ["v4"] }
 zip    = { version = "2.2", default-features = false, features = ["deflate"] }
 dirs   = "5"
 thiserror = "1"
+<<<<<<< HEAD
+=======
+rayon  = "1"
+flate2 = "1"
+reed-solomon-erasure = "6"
+# standalone native message box for startup failures where no window exists yet
+rfd    = "0.16"
+>>>>>>> origin/felix
 
 [dev-dependencies]
 tempfile = "3"
@@ -43,5 +66,8 @@ tempfile = "3"
 codegen-units = 1
 lto = true
 opt-level = "s"
+<<<<<<< HEAD
 panic = "abort"
+=======
+>>>>>>> origin/felix
 strip = true

@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 1420
+    },
+    {
+      "name": "frontend-debug",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "1421"],
+      "port": 1421
+    }
+  ]
+}
