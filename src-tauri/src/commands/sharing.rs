@@ -6,14 +6,6 @@
 // but they don't use any machine-specific key so they work on any machine
 
 use crate::commands::dto::OperationResult;
-<<<<<<< HEAD
-use crate::core::model::{Fragment, SplitParams, VaultEntry};
-use crate::core::{fragmenter, sharing};
-use crate::state::AppState;
-use std::fs;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::State;
-=======
 use crate::commands::vault::unique_path;
 use crate::core::model::{Fragment, SplitParams, VaultEntry};
 use crate::core::op_control::OpControl;
@@ -26,7 +18,6 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri::async_runtime::spawn_blocking;
 use uuid::Uuid;
 use zeroize::Zeroize;
->>>>>>> origin/felix
 
 fn now_unix() -> u64 {
     SystemTime::now()
@@ -35,49 +26,6 @@ fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
-<<<<<<< HEAD
-// Export all N fragments as opaque .svf files in a zip to Downloads
-#[tauri::command]
-pub fn share_vault_file(
-    file_id: String,
-    state: State<'_, AppState>,
-) -> Result<OperationResult, String> {
-    let storage = state.storage.lock().map_err(|_| "storage lock poisoned")?;
-
-    // load and decrypt fragments from vault (at-rest decryption)
-    let fragments = storage.load_fragments(&file_id)?;
-    let filename = fragments[0].original_filename.clone();
-    let count = fragments.len();
-
-    // package them as opaque .svf files (portable, no machine-specific key)
-    let zip_bytes = sharing::package_all_fragments(&fragments)?;
-
-    let downloads = dirs::download_dir()
-        .ok_or_else(|| "could not find Downloads".to_string())?;
-    let stem = std::path::Path::new(&filename)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(&filename);
-    let zip_name = format!("{stem}-share.zip");
-    let out_path = downloads.join(&zip_name);
-
-    fs::write(&out_path, &zip_bytes)
-        .map_err(|e| format!("could not write share file: {e}"))?;
-
-    Ok(OperationResult::ok(
-        format!("Share bundle for '{}' saved to Downloads ({} fragments)", filename, count),
-        Some(out_path.to_string_lossy().to_string()),
-    ))
-}
-
-// Reconstruct a file from individual .svf fragment files
-// The .svf files use opaque encoding so they work from any machine
-#[tauri::command]
-pub fn reconstruct_from_fragments(
-    fragment_paths: Vec<String>,
-    password: Option<String>,
-    state: State<'_, AppState>,
-=======
 // Turn a user-supplied name into a safe zip filename: strip any path
 // components (so it can't be used to write outside Downloads), drop
 // characters that are invalid/awkward in filenames, and make sure it ends
@@ -253,70 +201,11 @@ pub async fn reconstruct_from_fragments(
     operation_id: String,
     _state: State<'_, AppState>,
     app: AppHandle,
->>>>>>> origin/felix
 ) -> Result<OperationResult, String> {
     if fragment_paths.is_empty() {
         return Err("no fragment files selected".to_string());
     }
 
-<<<<<<< HEAD
-    // read and decode each .svf file
-    let mut fragments = Vec::new();
-    for path_str in &fragment_paths {
-        let data = fs::read(path_str)
-            .map_err(|e| format!("could not read {}: {e}", path_str))?;
-        let frag = sharing::read_opaque_fragment(&data)?;
-        fragments.push(frag);
-    }
-
-    let first = &fragments[0];
-    let filename = first.original_filename.clone();
-    let threshold = first.threshold;
-
-    if fragments.len() < threshold as usize {
-        return Err(format!(
-            "need at least {} fragments to reconstruct '{}', but only {} selected",
-            threshold, filename, fragments.len()
-        ));
-    }
-
-    let pw = password.as_deref().filter(|p| !p.is_empty());
-
-    // reconstruct the original file
-    let file_bytes = fragmenter::reconstruct_file(&fragments, pw)?;
-
-    // re-fragment and store in this vault
-    let params = SplitParams {
-        total_fragments: first.total,
-        threshold: first.threshold,
-        password: if first.password_protected { password } else { None },
-    };
-    let new_frags = fragmenter::split_file(&file_bytes, &filename, &params)?;
-    let new_id = new_frags[0].file_id.clone();
-
-    let storage = state.storage.lock().map_err(|_| "storage lock poisoned")?;
-    storage.store_fragments(&new_id, &new_frags)?;
-
-    let mut manifest = storage.load_manifest()?;
-    manifest.upsert(VaultEntry {
-        file_id: new_id,
-        filename: filename.clone(),
-        size: first.original_size,
-        total_fragments: first.total,
-        threshold: first.threshold,
-        password_protected: first.password_protected,
-        created_at: now_unix(),
-    });
-    storage.save_manifest(&manifest)?;
-
-    Ok(OperationResult::ok(
-        format!("Reconstructed '{}' and stored in vault", filename),
-        None,
-    ))
-}
-
-// Inspect selected .svf files to show details before reconstruction
-=======
     spawn_blocking(move || {
         let ctl = OpControl::new();
         app.state::<AppState>().operations.lock().unwrap().insert(operation_id.clone(), ctl.clone());
@@ -567,7 +456,6 @@ pub fn verify_fragment_password(
 }
 
 // Inspect selected .svf / .svf3 files to show details before reconstruction
->>>>>>> origin/felix
 #[tauri::command]
 pub fn inspect_fragments(
     fragment_paths: Vec<String>,
@@ -576,8 +464,6 @@ pub fn inspect_fragments(
         return Err("no fragment files selected".to_string());
     }
 
-<<<<<<< HEAD
-=======
     let first_data = fs::read(&fragment_paths[0])
         .map_err(|e| format!("could not read {}: {e}", fragment_paths[0]))?;
 
@@ -598,7 +484,6 @@ pub fn inspect_fragments(
     }
 
     // Small-file opaque fragments (.svf)
->>>>>>> origin/felix
     let mut fragments: Vec<Fragment> = Vec::new();
     for path_str in &fragment_paths {
         let data = fs::read(path_str)

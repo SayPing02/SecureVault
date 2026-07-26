@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-// AES-256-GCM encryption
-// GCM gives us both encryption AND integrity checking - if someone
-// tampers with the ciphertext or uses the wrong key, decryption will
-// fail with an error instead of giving back garbage data.
-=======
 // Cryptographic primitives for SecureVault
 //
 // At-rest vault encryption always uses AES-256-GCM (the encrypt/decrypt fns below).
@@ -16,7 +10,6 @@
 //   "standard" – PBKDF2-SHA256 100 000 iter (~100 ms)  — default
 //   "strong"   – PBKDF2-SHA256   1 000 000  (~1 s)     — sensitive files
 //   "argon2id" – Argon2id m=64MB, t=3, p=4            — best password resistance
->>>>>>> origin/felix
 
 use crate::core::error::{CoreError, CoreResult};
 use aes_gcm::aead::{Aead, KeyInit};
@@ -25,11 +18,6 @@ use rand::RngCore;
 use pbkdf2::pbkdf2_hmac;
 use sha2::Sha256;
 
-<<<<<<< HEAD
-pub const KEY_LEN: usize = 32; // AES-256 = 32 bytes
-pub const NONCE_LEN: usize = 12; // 96 bit nonce recommended for GCM
-pub const SALT_LEN: usize = 16;
-=======
 pub const KEY_LEN:   usize = 32;
 pub const NONCE_LEN: usize = 12;
 // XChaCha20's extended nonce. At 12 bytes, a randomly generated nonce is only
@@ -62,17 +50,12 @@ pub fn nonce_len_for_cipher(cipher_name: &str) -> usize {
         _ => NONCE_LEN,
     }
 }
->>>>>>> origin/felix
 
 #[derive(Debug, Clone)]
 pub struct Encrypted {
     pub ciphertext: Vec<u8>,
-<<<<<<< HEAD
-    pub nonce: [u8; NONCE_LEN],
-=======
     // Always NONCE_LEN bytes, except XChaCha20 output (XNONCE_LEN).
     pub nonce: Vec<u8>,
->>>>>>> origin/felix
 }
 
 pub fn generate_key() -> [u8; KEY_LEN] {
@@ -87,34 +70,6 @@ pub fn generate_salt() -> [u8; SALT_LEN] {
     salt
 }
 
-<<<<<<< HEAD
-pub const PBKDF2_ITERATIONS: u32 = 100_000;
-
-// derive a key from a password using PBKDF2
-// 100k iterations makes brute-force attacks slow
-pub fn derive_key_from_password(password: &str, salt: &[u8]) -> [u8; KEY_LEN] {
-    let mut key = [0u8; KEY_LEN];
-    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
-    key
-}
-
-pub fn encrypt(key: &[u8; KEY_LEN], plaintext: &[u8]) -> CoreResult<Encrypted> {
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
-
-    // always use a fresh random nonce - reusing one would be a security disaster
-    let mut nonce_bytes = [0u8; NONCE_LEN];
-    rand::thread_rng().fill_bytes(&mut nonce_bytes);
-    let nonce = Nonce::from_slice(&nonce_bytes);
-
-    let ciphertext = cipher
-        .encrypt(nonce, plaintext)
-        .map_err(|_| CoreError::Encryption("AES-GCM encryption failed".into()))?;
-
-    Ok(Encrypted {
-        ciphertext,
-        nonce: nonce_bytes,
-    })
-=======
 pub fn random_bytes(len: usize) -> Vec<u8> {
     let mut buf = vec![0u8; len];
     rand::thread_rng().fill_bytes(&mut buf);
@@ -152,19 +107,10 @@ pub fn encrypt(key: &[u8; KEY_LEN], plaintext: &[u8]) -> CoreResult<Encrypted> {
         .encrypt(nonce, plaintext)
         .map_err(|_| CoreError::Encryption("AES-GCM encryption failed".into()))?;
     Ok(Encrypted { ciphertext, nonce: nonce_bytes.to_vec() })
->>>>>>> origin/felix
 }
 
 pub fn decrypt(
     key: &[u8; KEY_LEN],
-<<<<<<< HEAD
-    nonce: &[u8; NONCE_LEN],
-    ciphertext: &[u8],
-) -> CoreResult<Vec<u8>> {
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
-    let nonce = Nonce::from_slice(nonce);
-
-=======
     nonce: &[u8],
     ciphertext: &[u8],
 ) -> CoreResult<Vec<u8>> {
@@ -173,14 +119,11 @@ pub fn decrypt(
     }
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     let nonce = Nonce::from_slice(nonce);
->>>>>>> origin/felix
     cipher
         .decrypt(nonce, ciphertext)
         .map_err(|_| CoreError::Decryption("wrong password or corrupted data".into()))
 }
 
-<<<<<<< HEAD
-=======
 // ── User-chosen cipher for file content ──────────────────────────────────────
 
 pub fn encrypt_file(cipher_name: &str, key: &[u8; KEY_LEN], plaintext: &[u8]) -> CoreResult<Encrypted> {
@@ -334,7 +277,6 @@ fn derive_argon2id(password: &str, salt: &[u8]) -> CoreResult<[u8; KEY_LEN]> {
     Ok(key)
 }
 
->>>>>>> origin/felix
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,10 +285,6 @@ mod tests {
     fn test_encrypt_decrypt() {
         let key = generate_key();
         let msg = b"the quick brown fox jumps over the lazy dog";
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/felix
         let enc = encrypt(&key, msg).unwrap();
         let dec = decrypt(&key, &enc.nonce, &enc.ciphertext).unwrap();
         assert_eq!(dec, msg);
@@ -381,12 +319,6 @@ mod tests {
         let salt = [7u8; SALT_LEN];
         let a = derive_key_from_password("hunter2", &salt);
         let b = derive_key_from_password("hunter2", &salt);
-<<<<<<< HEAD
-        assert_eq!(a, b); // same password + salt = same key
-
-        let c = derive_key_from_password("hunter3", &salt);
-        assert_ne!(a, c); // different password = different key
-=======
         assert_eq!(a, b);
         let c = derive_key_from_password("hunter3", &salt);
         assert_ne!(a, c);
@@ -459,6 +391,5 @@ mod tests {
         assert_eq!(k.len(), KEY_LEN);
         let k2 = derive_key_kdf(KDF_ARGON2ID, "password", &salt).unwrap();
         assert_eq!(k, k2);
->>>>>>> origin/felix
     }
 }

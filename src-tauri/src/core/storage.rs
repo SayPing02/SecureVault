@@ -12,15 +12,6 @@
 //       fragment_1.svf.enc
 //       fragment_2.svf.enc
 //       ...
-<<<<<<< HEAD
-
-use crate::core::crypto;
-use crate::core::error::{CoreError, CoreResult};
-use crate::core::model::{Fragment, Manifest};
-use std::fs;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-=======
 //
 // Thread-safety:
 //   Fragment writes are fully concurrent — each file has a unique name so there
@@ -37,47 +28,23 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::Zeroize;
->>>>>>> origin/felix
 
 const VAULT_DIR_NAME: &str = "vault";
 const MANIFEST_NAME: &str = "manifest.json.enc";
 const APP_SECRET_NAME: &str = "app.secret";
-<<<<<<< HEAD
-=======
 const ACTIVITY_LOG_NAME: &str = "activity_log.json.enc";
->>>>>>> origin/felix
 
 pub struct Storage {
     vault_dir: PathBuf,
     at_rest_key: [u8; crypto::KEY_LEN],
-<<<<<<< HEAD
-=======
     // Serialises concurrent manifest read+write pairs; fragment writes need no lock.
     manifest_lock: Mutex<()>,
     // Same, for the activity log.
     activity_lock: Mutex<()>,
->>>>>>> origin/felix
 }
 
 impl Storage {
     pub fn new(app_data_dir: &Path) -> CoreResult<Self> {
-<<<<<<< HEAD
-        let vault_dir = app_data_dir.join(VAULT_DIR_NAME);
-        fs::create_dir_all(&vault_dir)?;
-
-        // load or create the app secret on first run
-        let secret_path = app_data_dir.join(APP_SECRET_NAME);
-        let app_secret = load_or_create_app_secret(&secret_path)?;
-
-        // derive the at-rest encryption key from the app secret
-        let at_rest_key =
-            crypto::derive_key_from_password(&hex(&app_secret), b"securevault-at-rest");
-
-        Ok(Self { vault_dir, at_rest_key })
-    }
-
-    pub fn load_manifest(&self) -> CoreResult<Manifest> {
-=======
         let secret_path = app_data_dir.join(APP_SECRET_NAME);
         let app_secret = load_or_create_app_secret(&secret_path)?;
         Self::from_secret(app_data_dir, app_secret)
@@ -108,32 +75,21 @@ impl Storage {
 
     pub fn load_manifest(&self) -> CoreResult<Manifest> {
         let _guard = self.manifest_lock.lock().unwrap_or_else(|e| e.into_inner());
->>>>>>> origin/felix
         let path = self.vault_dir.join(MANIFEST_NAME);
         if !path.exists() {
             return Ok(Manifest::default());
         }
         let plaintext = self.read_encrypted(&path)?;
-<<<<<<< HEAD
-        let manifest = serde_json::from_slice(&plaintext)?;
-        Ok(manifest)
-    }
-
-    pub fn save_manifest(&self, manifest: &Manifest) -> CoreResult<()> {
-=======
         Ok(serde_json::from_slice(&plaintext)?)
     }
 
     pub fn save_manifest(&self, manifest: &Manifest) -> CoreResult<()> {
         let _guard = self.manifest_lock.lock().unwrap_or_else(|e| e.into_inner());
->>>>>>> origin/felix
         let path = self.vault_dir.join(MANIFEST_NAME);
         let json = serde_json::to_vec_pretty(manifest)?;
         self.write_encrypted(&path, &json)
     }
 
-<<<<<<< HEAD
-=======
     pub fn load_activity_log(&self) -> CoreResult<ActivityLog> {
         let _guard = self.activity_lock.lock().unwrap_or_else(|e| e.into_inner());
         let path = self.vault_dir.join(ACTIVITY_LOG_NAME);
@@ -175,7 +131,6 @@ impl Storage {
 
     // Each fragment file has a unique name so this is safe to call concurrently
     // from multiple threads for the same file_id.
->>>>>>> origin/felix
     pub fn store_fragments(&self, file_id: &str, fragments: &[Fragment]) -> CoreResult<()> {
         let dir = self.vault_dir.join(file_id);
         fs::create_dir_all(&dir)?;
@@ -189,13 +144,6 @@ impl Storage {
     }
 
     pub fn load_fragments(&self, file_id: &str) -> CoreResult<Vec<Fragment>> {
-<<<<<<< HEAD
-        let dir = self.vault_dir.join(file_id);
-        if !dir.exists() {
-            return Err(CoreError::Storage(
-                format!("no fragments found for {file_id}")
-            ));
-=======
         self.load_fragments_limited(file_id, usize::MAX)
     }
 
@@ -208,19 +156,13 @@ impl Storage {
         let dir = self.vault_dir.join(file_id);
         if !dir.exists() {
             return Err(CoreError::Storage(format!("no fragments found for {file_id}")));
->>>>>>> origin/felix
         }
 
         let mut fragments = Vec::new();
         for entry in fs::read_dir(&dir)? {
-<<<<<<< HEAD
-            let path = entry?.path();
-            // only read .svf.enc files, skip anything else
-=======
             if fragments.len() >= limit { break; }
 
             let path = entry?.path();
->>>>>>> origin/felix
             let is_frag = path.file_name()
                 .and_then(|n| n.to_str())
                 .map(|n| n.ends_with(".svf.enc"))
@@ -236,8 +178,6 @@ impl Storage {
         Ok(fragments)
     }
 
-<<<<<<< HEAD
-=======
     /// Whether the stored fragment at `index` can still be read and
     /// decrypted intact. Fragments are written with authenticated encryption
     /// (`write_encrypted`), so any on-disk corruption or tampering makes
@@ -262,7 +202,6 @@ impl Storage {
         self.vault_dir.join(file_id)
     }
 
->>>>>>> origin/felix
     pub fn delete_fragments(&self, file_id: &str) -> CoreResult<()> {
         let dir = self.vault_dir.join(file_id);
         if dir.exists() {
@@ -271,10 +210,6 @@ impl Storage {
         Ok(())
     }
 
-<<<<<<< HEAD
-    // encrypt data and write to disk
-    // format: [12 byte nonce][ciphertext...]
-=======
     /// Remove any vault folder not referenced by the manifest. An add-file
     /// operation writes fragments/shards to disk before updating the
     /// manifest at the very end — if the app is killed or crashes in
@@ -309,7 +244,6 @@ impl Storage {
     }
 
     // format: [12-byte nonce][ciphertext...]
->>>>>>> origin/felix
     fn write_encrypted(&self, path: &Path, data: &[u8]) -> CoreResult<()> {
         let enc = crypto::encrypt(&self.at_rest_key, data)?;
         let mut file = fs::File::create(path)?;
@@ -318,10 +252,6 @@ impl Storage {
         Ok(())
     }
 
-<<<<<<< HEAD
-    // read and decrypt a file written by write_encrypted
-=======
->>>>>>> origin/felix
     fn read_encrypted(&self, path: &Path) -> CoreResult<Vec<u8>> {
         let mut file = fs::File::open(path)?;
         let mut buf = Vec::new();
@@ -329,11 +259,7 @@ impl Storage {
 
         if buf.len() <= crypto::NONCE_LEN {
             return Err(CoreError::Storage(
-<<<<<<< HEAD
-                format!("file is truncated: {}", path.display())
-=======
                 format!("file is truncated: {}", path.display()),
->>>>>>> origin/felix
             ));
         }
 
@@ -345,15 +271,12 @@ impl Storage {
     }
 }
 
-<<<<<<< HEAD
-=======
 impl Drop for Storage {
     fn drop(&mut self) {
         self.at_rest_key.zeroize();
     }
 }
 
->>>>>>> origin/felix
 fn load_or_create_app_secret(path: &Path) -> CoreResult<[u8; 32]> {
     if path.exists() {
         let mut file = fs::File::open(path)?;
@@ -362,10 +285,6 @@ fn load_or_create_app_secret(path: &Path) -> CoreResult<[u8; 32]> {
             .map_err(|_| CoreError::Storage("app secret file is corrupt".into()))?;
         Ok(buf)
     } else {
-<<<<<<< HEAD
-        // first run - generate a new random secret
-=======
->>>>>>> origin/felix
         let secret = crypto::generate_key();
         fs::write(path, secret)?;
         Ok(secret)
@@ -385,11 +304,7 @@ mod tests {
     fn temp_storage() -> (Storage, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
         let s = Storage::new(dir.path()).unwrap();
-<<<<<<< HEAD
-        (s, dir) // need to keep TempDir alive or the dir gets deleted
-=======
         (s, dir)
->>>>>>> origin/felix
     }
 
     #[test]
@@ -405,13 +320,10 @@ mod tests {
             threshold: 3,
             password_protected: false,
             created_at: 0,
-<<<<<<< HEAD
-=======
             is_large: false,
             fragment_labels: Default::default(),
             pinned: Default::default(),
             last_rotated_at: Default::default(),
->>>>>>> origin/felix
         });
         storage.save_manifest(&manifest).unwrap();
 
@@ -424,15 +336,7 @@ mod tests {
     fn test_fragment_storage() {
         let (storage, _dir) = temp_storage();
 
-<<<<<<< HEAD
-        let params = SplitParams {
-            total_fragments: 4,
-            threshold: 2,
-            password: None,
-        };
-=======
         let params = SplitParams { total_fragments: 4, threshold: 2, password: None, compress: false, cipher: "aes256gcm".to_string(), kdf: "standard".to_string(), padding_pct: 0 };
->>>>>>> origin/felix
         let frags = fragmenter::split_file(b"hello vault", "h.txt", &params).unwrap();
         let file_id = frags[0].file_id.clone();
 
@@ -440,10 +344,6 @@ mod tests {
         let loaded = storage.load_fragments(&file_id).unwrap();
         assert_eq!(loaded.len(), 4);
 
-<<<<<<< HEAD
-        // make sure we can still reconstruct after going through storage
-=======
->>>>>>> origin/felix
         let recovered = fragmenter::reconstruct_file(&loaded[0..2], None).unwrap();
         assert_eq!(recovered, b"hello vault");
     }
@@ -451,15 +351,7 @@ mod tests {
     #[test]
     fn test_delete() {
         let (storage, _dir) = temp_storage();
-<<<<<<< HEAD
-        let params = SplitParams {
-            total_fragments: 3,
-            threshold: 2,
-            password: None,
-        };
-=======
         let params = SplitParams { total_fragments: 3, threshold: 2, password: None, compress: false, cipher: "aes256gcm".to_string(), kdf: "standard".to_string(), padding_pct: 0 };
->>>>>>> origin/felix
         let frags = fragmenter::split_file(b"data", "d.txt", &params).unwrap();
         let id = frags[0].file_id.clone();
 
@@ -467,8 +359,6 @@ mod tests {
         storage.delete_fragments(&id).unwrap();
         assert!(storage.load_fragments(&id).is_err());
     }
-<<<<<<< HEAD
-=======
 
     #[test]
     fn test_cleanup_orphaned_fragments() {
@@ -556,5 +446,4 @@ mod tests {
         let recovered = fragmenter::reconstruct_file(&loaded[0..3], None).unwrap();
         assert_eq!(recovered, b"parallel write test data");
     }
->>>>>>> origin/felix
 }

@@ -8,30 +8,6 @@
 </head>
 <body>
 
-<<<<<<< HEAD
-<div class="bg-glow bg-glow-1"></div>
-<div class="bg-glow bg-glow-2"></div>
-
-<header>
-  <div class="logo-icon">🔐</div>
-  <div class="logo-text">Secure<span>Vault</span></div>
-</header>
-
-<div class="app">
-
-  <!-- ════════════════════════════ TABS ════════════════════════════ -->
-  <div class="tabs">
-    <button class="tab active" data-tab="vault">
-      <span class="tab-icon">🗄️</span> My Files
-    </button>
-    <button class="tab" data-tab="split">
-      <span class="tab-icon">✂️</span> Add File
-    </button>
-    <button class="tab" data-tab="import">
-      <span class="tab-icon">📥</span> Reconstruct
-    </button>
-  </div>
-=======
 <!-- ════════════════════════ INTRO / SPLASH SCREEN ════════════════════════ -->
 <div id="introScreen" class="intro-screen">
   <div class="intro-content">
@@ -77,7 +53,6 @@
   </nav>
 
   <div class="app">
->>>>>>> origin/felix
 
   <!-- ════════════════════════ VAULT PANEL ════════════════════════ -->
   <div id="panel-vault" class="panel active">
@@ -85,33 +60,20 @@
     <div class="section-sub">// Files stored on your device</div>
 
     <div class="info-box">
-<<<<<<< HEAD
-      <span class="info-box-icon">ℹ️</span>
-      <span>Click a file to <strong>download</strong>, <strong>Share</strong> or delete.</span>
-=======
       <span>Click a file to <strong>preview its fragments</strong>, or use the buttons to download, Share, or delete.</span>
->>>>>>> origin/felix
     </div>
 
     <div class="card">
       <div class="card-title">Stored Files</div>
-<<<<<<< HEAD
-=======
       <input type="text" id="vaultSearchInput" class="vault-search" placeholder="Search files by name…">
->>>>>>> origin/felix
       <div id="vaultList" class="vault-list">
         <!-- populated by main.js -->
       </div>
     </div>
 
     <div class="btn-row">
-<<<<<<< HEAD
-      <button class="btn btn-primary" data-goto="split">✂️ Add a New File</button>
-      <button class="btn btn-secondary" id="btnRefreshVault">↺ Refresh</button>
-=======
       <button class="btn btn-primary" data-goto="split">Add a New File</button>
       <button class="btn btn-secondary" id="btnRefreshVault">Refresh</button>
->>>>>>> origin/felix
     </div>
   </div>
 
@@ -121,11 +83,7 @@
     <div class="section-sub">// Store the file into device</div>
 
     <div class="info-box">
-<<<<<<< HEAD
-      <span class="info-box-icon">ℹ️</span>
-=======
       <span>Choose <strong>N</strong> (total fragments) and <strong>K</strong> (threshold) — any <strong>K</strong> of the <strong>N</strong> fragments can rebuild the file.</span>
->>>>>>> origin/felix
     </div>
 
     <!-- File Select -->
@@ -133,17 +91,11 @@
       <div class="card-title">Select File</div>
       <div class="drop-zone" id="splitDropZone">
         <div id="splitDropContent">
-<<<<<<< HEAD
-          <div class="drop-icon">📂</div>
-=======
->>>>>>> origin/felix
           <div class="drop-text">Click to browse for a file</div>
           <div class="drop-sub">Any file type · stored locally</div>
         </div>
       </div>
       <div id="splitPickedFile" class="picked-file hidden"></div>
-<<<<<<< HEAD
-=======
       <!-- shown after file is selected -->
       <div id="splitFileNameRow" class="form-row single hidden">
         <div>
@@ -166,7 +118,6 @@
         <button class="btn-recommend-apply" id="btnRecommendApply">Apply</button>
         <button class="btn-recommend-dismiss" id="btnRecommendDismiss">Dismiss</button>
       </div>
->>>>>>> origin/felix
     </div>
 
     <!-- Config -->
@@ -175,19 +126,11 @@
       <div class="form-row triple">
         <div>
           <label>Total Fragments</label>
-<<<<<<< HEAD
-          <input type="number" id="totalShares" min="2" max="10" value="5">
-        </div>
-        <div>
-          <label>Minimum Threshold</label>
-          <input type="number" id="threshold" min="2" max="5" value="3">
-=======
           <input type="number" id="totalShares" min="2" value="5">
         </div>
         <div>
           <label>Minimum Threshold</label>
           <input type="number" id="threshold" min="2" value="3">
->>>>>>> origin/felix
         </div>
         <!--<div>
           <label>Encryption</label>
@@ -201,8 +144,6 @@
         <div>
           <label>Password (optional)</label>
           <input type="password" id="splitPassword" placeholder="Leave blank for no password">
-<<<<<<< HEAD
-=======
           <div class="password-hint" id="splitPasswordHint"></div>
         </div>
       </div>
@@ -319,17 +260,12 @@
               <div class="kdf-meta">~1-2 s · 64 MB RAM · best</div>
             </label>
           </div>
->>>>>>> origin/felix
         </div>
       </div>
 
       <!-- Threshold visual -->
       <div>
-<<<<<<< HEAD
-        <label>Fragment Visualisation (🔵 = required · 🟢 = bonus)</label>
-=======
         <label>Fragment Visualisation (filled = required · outlined = bonus)</label>
->>>>>>> origin/felix
         <div class="threshold-visual" id="thresholdVisual"></div>
       </div>
     </div>
@@ -338,27 +274,18 @@
     <div class="card">
       <div class="card-title">Operation</div>
       <div class="btn-row">
-<<<<<<< HEAD
-        <button class="btn btn-primary" id="btnSplit">✂️ Add to Vault</button>
-        <button class="btn btn-secondary" id="btnSplitReset">↺ Reset</button>
-=======
         <button class="btn btn-primary" id="btnSplit">Add to Vault</button>
         <button class="btn btn-secondary hidden" id="btnSplitPause">Pause</button>
         <button class="btn btn-secondary hidden" id="btnSplitCancel">Cancel</button>
         <button class="btn btn-secondary" id="btnSplitReset">Reset</button>
->>>>>>> origin/felix
       </div>
       <div class="progress-wrap hidden" id="splitProgress">
         <div class="progress-bar" id="splitProgressBar"></div>
       </div>
-<<<<<<< HEAD
-      <div class="progress-label hidden" id="splitProgressLabel"></div>
-=======
       <div class="progress-footer hidden" id="splitProgressFooter">
         <span class="progress-label" id="splitProgressLabel"></span>
         <span class="progress-time" id="splitTimeRemaining"></span>
       </div>
->>>>>>> origin/felix
     </div>
 
     <!-- Console -->
@@ -373,16 +300,9 @@
   <!-- ════════════════════════ IMPORT PANEL ════════════════════════ -->
   <div id="panel-import" class="panel">
     <div class="section-title">Reconstruct from Fragments</div>
-<<<<<<< HEAD
-    <div class="section-sub">// Select individual .svf fragment files to reconstruct a file</div>
-
-    <div class="info-box">
-      <span class="info-box-icon">ℹ️</span>
-=======
     <div class="section-sub">// Select individual .svf or .svf3 fragment files to reconstruct a file</div>
 
     <div class="info-box">
->>>>>>> origin/felix
       <span>Select <strong>individual fragment files</strong>.</span>
     </div>
 
@@ -390,14 +310,8 @@
       <div class="card-title">Select Fragment Files</div>
       <div class="drop-zone" id="importDropZone">
         <div id="importDropContent">
-<<<<<<< HEAD
-          <div class="drop-icon">🧩</div>
-          <div class="drop-text">Click to browse for fragment files</div>
-          <div class="drop-sub">Select multiple .svf files</div>
-=======
           <div class="drop-text">Click to browse for fragment files</div>
           <div class="drop-sub">Select multiple .svf or .svf3 files</div>
->>>>>>> origin/felix
         </div>
       </div>
       <div id="importPickedFiles" class="picked-file hidden"></div>
@@ -411,11 +325,6 @@
     <div class="card">
       <div class="card-title">Operation</div>
       <div class="btn-row">
-<<<<<<< HEAD
-        <button class="btn btn-primary" id="btnImport">📥 Store</button>
-        <button class="btn btn-secondary" id="btnImportAddMore">+ Add More Fragments</button>
-        <button class="btn btn-secondary" id="btnImportReset">↺ Reset</button>
-=======
         <button class="btn btn-primary" id="btnImport">Store</button>
         <button class="btn btn-secondary hidden" id="btnImportPause">Pause</button>
         <button class="btn btn-secondary hidden" id="btnImportCancel">Cancel</button>
@@ -428,7 +337,6 @@
       <div class="progress-footer hidden" id="importProgressFooter">
         <span class="progress-label" id="importProgressLabel"></span>
         <span class="progress-time" id="importTimeRemaining"></span>
->>>>>>> origin/felix
       </div>
     </div>
 
@@ -440,9 +348,6 @@
     </div>
   </div>
 
-<<<<<<< HEAD
- 
-=======
   <!-- ════════════════════════ ACTIVITY PANEL ════════════════════════ -->
   <div id="panel-activity" class="panel">
     <div class="section-title">Activity</div>
@@ -526,7 +431,6 @@
 
   </div>
 </div>
->>>>>>> origin/felix
 
 <!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
 <div id="passwordModal" class="modal-overlay hidden">
@@ -537,10 +441,7 @@
       <label>Password</label>
       <input type="password" id="modalPasswordInput" placeholder="Enter the file password">
     </div>
-<<<<<<< HEAD
-=======
     <div class="modal-error hidden" id="modalError">Incorrect password</div>
->>>>>>> origin/felix
     <div class="modal-actions">
       <button class="btn btn-secondary" id="modalCancel">Cancel</button>
       <button class="btn btn-primary" id="modalConfirm">Confirm</button>
@@ -548,8 +449,6 @@
   </div>
 </div>
 
-<<<<<<< HEAD
-=======
 <!-- ════════════════════════ SHARE ZIP NAME MODAL ════════════════════════ -->
 <div id="zipNameModal" class="modal-overlay hidden">
   <div class="modal">
@@ -641,7 +540,6 @@
   </div>
 </div>
 
->>>>>>> origin/felix
 <!-- toast notifications -->
 <div class="toast-stack" id="toastStack"></div>
 

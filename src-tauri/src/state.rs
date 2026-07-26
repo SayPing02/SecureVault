@@ -1,21 +1,3 @@
-<<<<<<< HEAD
-// App state that gets shared between all tauri commands
-// Wrapping Storage in a Mutex so it can be safely used from different threads
-
-use crate::core::storage::Storage;
-use std::sync::Mutex;
-
-pub struct AppState {
-    pub storage: Mutex<Storage>,
-}
-
-impl AppState {
-    pub fn new(storage: Storage) -> Self {
-        Self {
-            storage: Mutex::new(storage),
-        }
-    }
-=======
 // App state shared between all Tauri commands.
 // Storage is Arc-wrapped so commands can clone a reference and run concurrent
 // operations (e.g. parallel fragment writes). Storage handles its own internal
@@ -73,5 +55,4 @@ impl AppState {
     pub fn clear_storage(&self) {
         *self.storage.lock().unwrap() = None;
     }
->>>>>>> origin/felix
 }

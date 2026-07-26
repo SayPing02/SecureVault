@@ -20,12 +20,9 @@ pub enum CoreError {
     #[error("integrity check failed: the file may be corrupted")]
     ChecksumMismatch,
 
-<<<<<<< HEAD
-=======
     #[error("operation cancelled")]
     Cancelled,
 
->>>>>>> origin/felix
     #[error("storage error: {0}")]
     Storage(String),
 

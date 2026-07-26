@@ -15,10 +15,6 @@ use crate::core::model::{Fragment, SplitParams, FRAGMENT_FORMAT_VERSION};
 use crate::core::shamir::{self, Share};
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
-<<<<<<< HEAD
-use sha2::{Digest, Sha256};
-use uuid::Uuid;
-=======
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
@@ -26,7 +22,6 @@ use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use uuid::Uuid;
 use zeroize::Zeroize;
->>>>>>> origin/felix
 
 fn sha256_hex(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -35,8 +30,6 @@ fn sha256_hex(data: &[u8]) -> String {
     hash.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-<<<<<<< HEAD
-=======
 fn zlib_compress(data: &[u8]) -> CoreResult<Vec<u8>> {
     let mut enc = ZlibEncoder::new(Vec::new(), Compression::default());
     enc.write_all(data)
@@ -53,14 +46,11 @@ fn zlib_decompress(data: &[u8]) -> CoreResult<Vec<u8>> {
     Ok(out)
 }
 
->>>>>>> origin/felix
 pub fn split_file(
     file_bytes: &[u8],
     original_filename: &str,
     params: &SplitParams,
 ) -> CoreResult<Vec<Fragment>> {
-<<<<<<< HEAD
-=======
     split_file_with_progress(file_bytes, original_filename, params, |_, _| {})
 }
 
@@ -72,30 +62,10 @@ pub fn split_file_with_progress<F: FnMut(u8, &str)>(
     params: &SplitParams,
     mut on_progress: F,
 ) -> CoreResult<Vec<Fragment>> {
->>>>>>> origin/felix
     if file_bytes.is_empty() {
         return Err(CoreError::Storage("file is empty".into()));
     }
 
-<<<<<<< HEAD
-    // treat empty string same as no password
-    let password = params.password.as_deref().filter(|p| !p.is_empty());
-    let password_protected = password.is_some();
-
-    // step 1: generate key and encrypt the file
-    let file_key = crypto::generate_key();
-    let encrypted_file = crypto::encrypt(&file_key, file_bytes)?;
-
-    // step 2: optionally wrap the key behind a password
-    // if password protected, we encrypt the AES key AGAIN with a password-derived key
-    // so even having k fragments isnt enough without the password
-    let salt = crypto::generate_salt();
-    let (key_to_share, salt_b64): (Vec<u8>, String) = match password {
-        Some(pw) => {
-            let pw_key = crypto::derive_key_from_password(pw, &salt);
-            let wrapped = crypto::encrypt(&pw_key, &file_key)?;
-            // prepend nonce so we can find it during unwrap
-=======
     let password = params.password.as_deref().filter(|p| !p.is_empty());
     let password_protected = password.is_some();
 
@@ -136,7 +106,6 @@ pub fn split_file_with_progress<F: FnMut(u8, &str)>(
             let mut pw_key = crypto::derive_key_kdf(&params.kdf, pw, &salt)?;
             let wrapped = crypto::encrypt(&pw_key, &file_key)?;
             pw_key.zeroize();
->>>>>>> origin/felix
             let mut blob = wrapped.nonce.to_vec();
             blob.extend_from_slice(&wrapped.ciphertext);
             (blob, B64.encode(salt))
@@ -144,19 +113,12 @@ pub fn split_file_with_progress<F: FnMut(u8, &str)>(
         None => (file_key.to_vec(), String::new()),
     };
 
-<<<<<<< HEAD
-    // step 3: split the key with shamir
-    let shares = shamir::split(&key_to_share, params.total_fragments, params.threshold)?;
-
-    // step 4: build the fragment structs
-=======
     on_progress(65, "Splitting encryption key…");
     let shares = shamir::split(&key_to_share, params.total_fragments, params.threshold)?;
     file_key.zeroize();
     key_to_share.zeroize();
 
     on_progress(80, "Packaging fragments…");
->>>>>>> origin/felix
     let file_id = Uuid::new_v4().to_string();
     let checksum = sha256_hex(file_bytes);
     let ct_b64 = B64.encode(&encrypted_file.ciphertext);
@@ -173,21 +135,13 @@ pub fn split_file_with_progress<F: FnMut(u8, &str)>(
             original_filename: original_filename.to_string(),
             original_size: file_bytes.len() as u64,
             password_protected,
-<<<<<<< HEAD
-=======
             compressed: params.compress,
->>>>>>> origin/felix
             salt_b64: salt_b64.clone(),
             share_x: share.x,
             share_y_b64: B64.encode(&share.y),
             nonce_b64: nonce_b64.clone(),
             checksum: checksum.clone(),
             ciphertext_b64: ct_b64.clone(),
-<<<<<<< HEAD
-        })
-        .collect();
-
-=======
             cipher: params.cipher.clone(),
             kdf: params.kdf.clone(),
             padding_pct: params.padding_pct,
@@ -195,7 +149,6 @@ pub fn split_file_with_progress<F: FnMut(u8, &str)>(
         .collect();
 
     on_progress(100, "Fragments ready");
->>>>>>> origin/felix
     Ok(fragments)
 }
 
@@ -203,8 +156,6 @@ pub fn reconstruct_file(
     fragments: &[Fragment],
     password: Option<&str>,
 ) -> CoreResult<Vec<u8>> {
-<<<<<<< HEAD
-=======
     reconstruct_file_with_progress(fragments, password, |_, _| {})
 }
 
@@ -214,7 +165,6 @@ pub fn reconstruct_file_with_progress<F: FnMut(u8, &str)>(
     password: Option<&str>,
     mut on_progress: F,
 ) -> CoreResult<Vec<u8>> {
->>>>>>> origin/felix
     let first = fragments
         .first()
         .ok_or_else(|| CoreError::InvalidFragment("no fragments provided".into()))?;
@@ -232,11 +182,8 @@ pub fn reconstruct_file_with_progress<F: FnMut(u8, &str)>(
         ));
     }
 
-<<<<<<< HEAD
-=======
     on_progress(10, "Combining key shares…");
 
->>>>>>> origin/felix
     // step 1: combine shamir shares to get the key back
     let mut shares = Vec::new();
     for frag in fragments.iter().take(first.threshold as usize) {
@@ -245,41 +192,6 @@ pub fn reconstruct_file_with_progress<F: FnMut(u8, &str)>(
         shares.push(Share { x: frag.share_x, y });
     }
     let recovered_key_data = shamir::combine(&shares)?;
-<<<<<<< HEAD
-
-    // step 2: if password protected, unwrap the key
-    let file_key: [u8; crypto::KEY_LEN] = if first.password_protected {
-        let pw = password.ok_or_else(|| {
-            CoreError::Decryption("this file needs a password".into())
-        })?;
-
-        let salt = B64.decode(&first.salt_b64)
-            .map_err(|e| CoreError::InvalidFragment(format!("bad salt: {e}")))?;
-        let pw_key = crypto::derive_key_from_password(pw, &salt);
-
-        // wrapped format is: nonce (12 bytes) + ciphertext
-        if recovered_key_data.len() <= crypto::NONCE_LEN {
-            return Err(CoreError::InvalidFragment("wrapped key too short".into()));
-        }
-        let (nonce_part, cipher_part) = recovered_key_data.split_at(crypto::NONCE_LEN);
-        let mut nonce = [0u8; crypto::NONCE_LEN];
-        nonce.copy_from_slice(nonce_part);
-
-        let unwrapped = crypto::decrypt(&pw_key, &nonce, cipher_part)?;
-        to_key_array(&unwrapped)?
-    } else {
-        to_key_array(&recovered_key_data)?
-    };
-
-    // step 3: decrypt the actual file
-    let nonce_bytes = B64.decode(&first.nonce_b64)
-        .map_err(|e| CoreError::InvalidFragment(format!("bad nonce: {e}")))?;
-    if nonce_bytes.len() != crypto::NONCE_LEN {
-        return Err(CoreError::InvalidFragment("nonce wrong length".into()));
-    }
-    let mut nonce = [0u8; crypto::NONCE_LEN];
-    nonce.copy_from_slice(&nonce_bytes);
-=======
     for share in shares.iter_mut() { share.y.zeroize(); }
 
     on_progress(30, "Unlocking encryption key…");
@@ -300,16 +212,10 @@ pub fn reconstruct_file_with_progress<F: FnMut(u8, &str)>(
     // validate it rather than assuming a fixed size here.
     let nonce_bytes = B64.decode(&first.nonce_b64)
         .map_err(|e| CoreError::InvalidFragment(format!("bad nonce: {e}")))?;
->>>>>>> origin/felix
 
     let ciphertext = B64.decode(&first.ciphertext_b64)
         .map_err(|e| CoreError::InvalidFragment(format!("bad ciphertext: {e}")))?;
 
-<<<<<<< HEAD
-    let plaintext = crypto::decrypt(&file_key, &nonce, &ciphertext)?;
-
-    // step 4: verify checksum
-=======
     let decrypted = crypto::decrypt_file(&first.cipher, &file_key, &nonce_bytes, &ciphertext)?;
     file_key.zeroize();
 
@@ -330,16 +236,10 @@ pub fn reconstruct_file_with_progress<F: FnMut(u8, &str)>(
 
     on_progress(95, "Verifying checksum…");
 
->>>>>>> origin/felix
     if sha256_hex(&plaintext) != first.checksum {
         return Err(CoreError::ChecksumMismatch);
     }
 
-<<<<<<< HEAD
-    Ok(plaintext)
-}
-
-=======
     on_progress(100, "Done");
 
     Ok(plaintext)
@@ -420,7 +320,6 @@ fn unwrap_file_key(
     key
 }
 
->>>>>>> origin/felix
 fn to_key_array(bytes: &[u8]) -> CoreResult<[u8; crypto::KEY_LEN]> {
     if bytes.len() != crypto::KEY_LEN {
         return Err(CoreError::InvalidFragment(format!(
@@ -438,12 +337,6 @@ mod tests {
     use super::*;
 
     fn make_params(n: u8, k: u8, pw: Option<&str>) -> SplitParams {
-<<<<<<< HEAD
-        SplitParams {
-            total_fragments: n,
-            threshold: k,
-            password: pw.map(|s| s.to_string()),
-=======
         make_params_cipher(n, k, pw, "aes256gcm")
     }
 
@@ -456,7 +349,6 @@ mod tests {
             cipher:          cipher.to_string(),
             kdf:             "standard".to_string(),
             padding_pct:     0,
->>>>>>> origin/felix
         }
     }
 
@@ -470,8 +362,6 @@ mod tests {
         assert_eq!(recovered, data);
     }
 
-<<<<<<< HEAD
-=======
     // XChaCha20's 24-byte nonce is wider than every other cipher's — this
     // exercises the base64 round trip through Fragment.nonce_b64 without the
     // fixed-12-byte assumption the small-file decrypt path used to have.
@@ -492,7 +382,6 @@ mod tests {
         assert_eq!(recovered, data);
     }
 
->>>>>>> origin/felix
     #[test]
     fn test_with_password() {
         let data = b"Password-locked payload bytes here.";
@@ -502,8 +391,6 @@ mod tests {
     }
 
     #[test]
-<<<<<<< HEAD
-=======
     fn test_verify_password() {
         let data = b"verify me without reconstructing".to_vec();
         let frags = split_file(&data, "x.bin", &make_params(4, 2, Some("hunter2"))).unwrap();
@@ -524,7 +411,6 @@ mod tests {
     }
 
     #[test]
->>>>>>> origin/felix
     fn test_wrong_password() {
         let data = b"cannot read this without the password";
         let frags = split_file(data, "x.bin", &make_params(3, 2, Some("correct"))).unwrap();
@@ -553,8 +439,6 @@ mod tests {
         assert_eq!(reconstruct_file(&subset, None).unwrap(), data);
     }
 }
-<<<<<<< HEAD
-=======
 
 #[test]
 fn test_padding_split_reconstruct() {
@@ -589,4 +473,3 @@ fn test_padding_with_compress() {
     let recovered = reconstruct_file(&frags[0..2], None).unwrap();
     assert_eq!(recovered, data);
 }
->>>>>>> origin/felix

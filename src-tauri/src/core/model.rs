@@ -4,11 +4,6 @@
 use serde::{Deserialize, Serialize};
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
-<<<<<<< HEAD
-
-pub const FRAGMENT_FORMAT_VERSION: &str = "2.0";
-
-=======
 use std::collections::HashMap;
 
 pub const FRAGMENT_FORMAT_VERSION: &str = "2.0";
@@ -17,7 +12,6 @@ fn default_cipher()  -> String { "aes256gcm".to_string() }
 fn default_kdf()     -> String { "standard".to_string() }
 fn default_padding() -> u8    { 0 }
 
->>>>>>> origin/felix
 // A single .svf fragment file
 // Contains one shamir share of the AES key + a copy of the encrypted file
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,14 +24,6 @@ pub struct Fragment {
     pub original_filename: String,
     pub original_size: u64,
     pub password_protected: bool,
-<<<<<<< HEAD
-    pub salt_b64: String,  // salt, only used if password_protected
-    pub share_x: u8,
-    pub share_y_b64: String,
-    pub nonce_b64: String,
-    pub checksum: String, // sha256 of the original file
-    pub ciphertext_b64: String, // the entire encrypted file
-=======
     #[serde(default)]
     pub compressed: bool,
     pub salt_b64: String,
@@ -56,7 +42,6 @@ pub struct Fragment {
     // Random padding added before encrypt to obscure true file size (0–100 %)
     #[serde(default = "default_padding")]
     pub padding_pct: u8,
->>>>>>> origin/felix
 }
 
 impl Fragment {
@@ -88,8 +73,6 @@ pub struct SplitParams {
     pub total_fragments: u8,
     pub threshold: u8,
     pub password: Option<String>,
-<<<<<<< HEAD
-=======
     #[serde(default)]
     pub compress: bool,
     #[serde(default = "default_cipher")]
@@ -98,7 +81,6 @@ pub struct SplitParams {
     pub kdf: String,     // "fast" | "standard" | "strong" | "argon2id"
     #[serde(default)]
     pub padding_pct: u8, // 0 = none, 10/25/50 = % of file size added as random noise
->>>>>>> origin/felix
 }
 
 // One entry in the vault list (metadata only, no key material)
@@ -111,8 +93,6 @@ pub struct VaultEntry {
     pub threshold: u8,
     pub password_protected: bool,
     pub created_at: u64,
-<<<<<<< HEAD
-=======
     #[serde(default)]
     pub is_large: bool,  // true → stored as RS shards (.svf3), false → legacy .svf.enc
     // User-assigned notes on where each fragment/shard was sent (e.g. index 1
@@ -128,7 +108,6 @@ pub struct VaultEntry {
     // computing staleness, rather than as an actual timestamp.
     #[serde(default)]
     pub last_rotated_at: u64,
->>>>>>> origin/felix
 }
 
 // The manifest stores all vault entries
@@ -159,8 +138,6 @@ impl Manifest {
         self.entries.len() != before
     }
 }
-<<<<<<< HEAD
-=======
 
 // A single line in the activity log — "added / downloaded / shared / deleted
 // / reconstructed <filename> at <timestamp>". Purely a local history for the
@@ -192,4 +169,3 @@ impl ActivityLog {
         self.entries.truncate(Self::MAX_ENTRIES);
     }
 }
->>>>>>> origin/felix

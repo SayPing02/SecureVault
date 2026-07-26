@@ -7,6 +7,6 @@
     "\\src-tauri\\src\\commands",
     "\\src-tauri\\src\\core"
   ],
-  "SelectedNode": "\\src\\main.js",
+  "SelectedNode": "\\src-tauri\\Cargo.lock",
   "PreviewInSolutionExplorer": false
 }

@@ -1,20 +1,4 @@
   :root {
-<<<<<<< HEAD
-    --bg: #080b10;
-    --surface: #0d1117;
-    --surface2: #141a23;
-    --surface3: #1c2535;
-    --border: #1e2d3d;
-    --border2: #2a3f58;
-    --accent: #00d4ff;
-    --accent2: #0088cc;
-    --accent3: #00ff88;
-    --warn: #ff6b35;
-    --danger: #ff3366;
-    --text: #e8edf4;
-    --text2: #8899aa;
-    --text3: #4a5a6e;
-=======
     --bg: #16171b;
     --surface: #1c1d22;
     --surface2: #232429;
@@ -29,7 +13,6 @@
     --text: #e4e4e7;
     --text2: #9a9aa2;
     --text3: #626269;
->>>>>>> origin/felix
     --mono: 'Space Mono', monospace;
     --sans: 'Syne', sans-serif;
   }
@@ -44,31 +27,6 @@
     overflow-x: hidden;
   }
 
-<<<<<<< HEAD
-  /* Grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Glow blobs */
-  .bg-glow {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(120px);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .bg-glow-1 { width: 600px; height: 600px; background: rgba(0,136,204,0.07); top: -200px; right: -200px; }
-  .bg-glow-2 { width: 400px; height: 400px; background: rgba(0,255,136,0.05); bottom: -100px; left: -100px; }
-=======
   /* ── INTRO / SPLASH SCREEN ── */
   .intro-screen {
     position: fixed;
@@ -145,7 +103,6 @@
     width: 260px;
   }
   .lock-pin-row input { flex: 1; }
->>>>>>> origin/felix
 
   /* ── HEADER ── */
   header {
@@ -162,17 +119,10 @@
 
   .logo-icon {
     width: 36px; height: 36px;
-<<<<<<< HEAD
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-=======
     border-radius: 8px;
     object-fit: cover;
     display: block;
     border: 1px solid var(--border2);
->>>>>>> origin/felix
   }
 
   .logo-text {
@@ -197,30 +147,6 @@
   }
 
   /* ── MAIN LAYOUT ── */
-<<<<<<< HEAD
-  .app {
-    position: relative;
-    z-index: 1;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 40px 24px;
-  }
-
-  /* ── TABS ── */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 32px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    width: fit-content;
-  }
-
-  .tab {
-    padding: 10px 24px;
-=======
   .app-shell {
     position: relative;
     z-index: 1;
@@ -251,7 +177,6 @@
 
   .tab {
     padding: 10px 14px;
->>>>>>> origin/felix
     border-radius: 8px;
     font-family: var(--sans);
     font-size: 14px;
@@ -260,15 +185,6 @@
     cursor: pointer;
     border: none;
     background: transparent;
-<<<<<<< HEAD
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .tab:hover { color: var(--text); }
-=======
     transition: all 0.15s;
     display: flex;
     align-items: center;
@@ -279,16 +195,11 @@
 
   .tab:hover { color: var(--text); background: var(--surface2); }
   .tab:active { transform: scale(0.98); }
->>>>>>> origin/felix
 
   .tab.active {
     background: var(--surface3);
     color: var(--accent);
-<<<<<<< HEAD
-    box-shadow: 0 0 0 1px var(--border2);
-=======
     box-shadow: inset 2px 0 0 var(--accent);
->>>>>>> origin/felix
   }
 
   .tab-icon { font-size: 16px; }
@@ -384,11 +295,7 @@
 
   input:focus, select:focus, textarea:focus {
     border-color: var(--accent);
-<<<<<<< HEAD
-    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
-=======
     box-shadow: 0 0 0 3px rgba(123,141,217,0.1);
->>>>>>> origin/felix
   }
 
   input[type="range"] {
@@ -418,11 +325,6 @@
     background: var(--surface2);
   }
 
-<<<<<<< HEAD
-  .drop-zone:hover, .drop-zone.dragover {
-    border-color: var(--accent);
-    background: rgba(0,212,255,0.04);
-=======
   .drop-zone:hover, .drop-zone.dragover, .drop-zone.drag-over {
     border-color: var(--accent);
     background: rgba(123,141,217,0.06);
@@ -431,7 +333,6 @@
   .drop-zone.drag-over {
     border-style: solid;
     box-shadow: 0 0 0 3px rgba(123,141,217,0.15);
->>>>>>> origin/felix
   }
 
   .drop-zone input[type="file"] {
@@ -443,10 +344,6 @@
     height: 100%;
   }
 
-<<<<<<< HEAD
-  .drop-icon { font-size: 40px; margin-bottom: 12px; }
-=======
->>>>>>> origin/felix
   .drop-text { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
   .drop-sub { font-size: 12px; color: var(--text2); font-family: var(--mono); }
 
@@ -455,13 +352,8 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-<<<<<<< HEAD
-    background: rgba(0,212,255,0.06);
-    border: 1px solid rgba(0,212,255,0.2);
-=======
     background: rgba(123,141,217,0.06);
     border: 1px solid rgba(123,141,217,0.2);
->>>>>>> origin/felix
     border-radius: 8px;
     margin-top: 12px;
   }
@@ -486,23 +378,12 @@
   }
 
   .btn-primary {
-<<<<<<< HEAD
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: var(--bg);
-    box-shadow: 0 0 20px rgba(0,212,255,0.2);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0 30px rgba(0,212,255,0.35);
-=======
     background: var(--accent2);
     color: #f2f3f8;
   }
 
   .btn-primary:hover {
     background: var(--accent);
->>>>>>> origin/felix
   }
 
   .btn-primary:active { transform: translateY(0); }
@@ -513,21 +394,6 @@
     border: 1px solid var(--border2);
   }
   .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-<<<<<<< HEAD
-
-  .btn-danger {
-    background: rgba(255,51,102,0.1);
-    color: var(--danger);
-    border: 1px solid rgba(255,51,102,0.3);
-  }
-  .btn-danger:hover { background: rgba(255,51,102,0.2); }
-
-  .btn-success {
-    background: linear-gradient(135deg, var(--accent3), #00cc66);
-    color: var(--bg);
-  }
-  .btn-success:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(0,255,136,0.25); }
-=======
   .btn-secondary:active { transform: scale(0.97); }
 
   .btn-danger {
@@ -543,7 +409,6 @@
     color: #101312;
   }
   .btn-success:hover { background: #6fbb9f; }
->>>>>>> origin/felix
 
   .btn:disabled {
     opacity: 0.4;
@@ -577,22 +442,13 @@
   }
 
   .fragment-card.loaded {
-<<<<<<< HEAD
-    border-color: rgba(0,255,136,0.3);
-    background: rgba(0,255,136,0.03);
-=======
     border-color: rgba(95,168,143,0.3);
     background: rgba(95,168,143,0.03);
->>>>>>> origin/felix
   }
 
   .fragment-num {
     font-family: var(--mono);
-<<<<<<< HEAD
-    font-size: 22px;
-=======
     font-size: 15px;
->>>>>>> origin/felix
     font-weight: 700;
     color: var(--accent);
     margin-bottom: 6px;
@@ -611,11 +467,6 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-<<<<<<< HEAD
-  }
-  .fragment-status.ok { color: var(--accent3); }
-  .fragment-status.pending { color: var(--text3); }
-=======
     margin-top: 8px;
   }
   .fragment-status.ok { color: var(--accent3); }
@@ -635,20 +486,14 @@
     margin-top: 6px;
     word-break: break-word;
   }
->>>>>>> origin/felix
 
   .fragment-download {
     position: absolute;
     top: 12px; right: 12px;
     width: 28px; height: 28px;
     border-radius: 6px;
-<<<<<<< HEAD
-    background: rgba(0,212,255,0.1);
-    border: 1px solid rgba(0,212,255,0.2);
-=======
     background: rgba(123,141,217,0.1);
     border: 1px solid rgba(123,141,217,0.2);
->>>>>>> origin/felix
     color: var(--accent);
     font-size: 13px;
     display: flex; align-items: center; justify-content: center;
@@ -657,11 +502,7 @@
     text-decoration: none;
   }
   .fragment-download:hover {
-<<<<<<< HEAD
-    background: rgba(0,212,255,0.2);
-=======
     background: rgba(123,141,217,0.2);
->>>>>>> origin/felix
     transform: scale(1.1);
   }
 
@@ -707,23 +548,14 @@
   }
 
   .th-dot.required {
-<<<<<<< HEAD
-    background: rgba(0,212,255,0.1);
-=======
     background: rgba(123,141,217,0.1);
->>>>>>> origin/felix
     border-color: var(--accent);
     color: var(--accent);
   }
 
   .th-dot.extra {
-<<<<<<< HEAD
-    background: rgba(0,255,136,0.06);
-    border-color: rgba(0,255,136,0.3);
-=======
     background: rgba(95,168,143,0.06);
     border-color: rgba(95,168,143,0.3);
->>>>>>> origin/felix
     color: var(--accent3);
   }
 
@@ -740,11 +572,8 @@
     line-height: 1.8;
   }
 
-<<<<<<< HEAD
-=======
   .activity-console { height: 420px; }
 
->>>>>>> origin/felix
   .log-line { display: flex; gap: 12px; }
   .log-time { color: var(--text3); flex-shrink: 0; }
   .log-msg.info { color: var(--text2); }
@@ -767,24 +596,14 @@
   }
 
   .status-badge.success {
-<<<<<<< HEAD
-    background: rgba(0,255,136,0.1);
-    border: 1px solid rgba(0,255,136,0.3);
-=======
     background: rgba(95,168,143,0.1);
     border: 1px solid rgba(95,168,143,0.3);
->>>>>>> origin/felix
     color: var(--accent3);
   }
 
   .status-badge.error {
-<<<<<<< HEAD
-    background: rgba(255,51,102,0.1);
-    border: 1px solid rgba(255,51,102,0.3);
-=======
     background: rgba(192,104,95,0.1);
     border: 1px solid rgba(192,104,95,0.3);
->>>>>>> origin/felix
     color: var(--danger);
   }
 
@@ -802,13 +621,8 @@
 
   /* ── INFO BOXES ── */
   .info-box {
-<<<<<<< HEAD
-    background: rgba(0,212,255,0.05);
-    border: 1px solid rgba(0,212,255,0.15);
-=======
     background: rgba(123,141,217,0.05);
     border: 1px solid rgba(123,141,217,0.15);
->>>>>>> origin/felix
     border-radius: 10px;
     padding: 14px 18px;
     font-size: 13px;
@@ -818,11 +632,6 @@
     gap: 10px;
     align-items: flex-start;
   }
-<<<<<<< HEAD
-  .info-box-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-
-=======
->>>>>>> origin/felix
   /* ── STATS ── */
   .stats-row {
     display: grid;
@@ -871,13 +680,8 @@
   .upload-slot input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .upload-slot.filled {
     border-style: solid;
-<<<<<<< HEAD
-    border-color: rgba(0,255,136,0.3);
-    background: rgba(0,255,136,0.03);
-=======
     border-color: rgba(95,168,143,0.3);
     background: rgba(95,168,143,0.03);
->>>>>>> origin/felix
   }
   .slot-num {
     font-family: var(--mono);
@@ -892,13 +696,8 @@
 
   /* ── RESULT BOX ── */
   .result-box {
-<<<<<<< HEAD
-    background: rgba(0,255,136,0.04);
-    border: 1px solid rgba(0,255,136,0.2);
-=======
     background: rgba(95,168,143,0.04);
     border: 1px solid rgba(95,168,143,0.2);
->>>>>>> origin/felix
     border-radius: 12px;
     padding: 24px;
     text-align: center;
@@ -911,18 +710,6 @@
   /* ── SCHEMA DIAGRAM ── */
   .schema-svg { width: 100%; overflow: visible; }
 
-<<<<<<< HEAD
-  /* ── RESPONSIVE ── */
-  @media (max-width: 640px) {
-    .form-row { grid-template-columns: 1fr; }
-    .form-row.triple { grid-template-columns: 1fr; }
-    .stats-row { grid-template-columns: 1fr; }
-    header { padding: 16px; }
-    .app { padding: 20px 16px; }
-  }
-
-=======
->>>>>>> origin/felix
   select option { background: var(--surface2); }
 
   /* scrollbar */
@@ -937,26 +724,18 @@
      (the "My Files" vault tab + native dialog helpers)
      ════════════════════════════════════════════════════════════════ */
 
-<<<<<<< HEAD
-=======
   /* Vault search */
   .vault-search { margin-bottom: 16px; }
 
->>>>>>> origin/felix
   /* Vault file list */
   .vault-list { display: flex; flex-direction: column; gap: 10px; }
 
   .vault-item {
-<<<<<<< HEAD
-    display: flex;
-    align-items: center;
-=======
     position: relative;
     z-index: 0;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
->>>>>>> origin/felix
     gap: 16px;
     padding: 16px 18px;
     background: var(--surface2);
@@ -965,15 +744,6 @@
     transition: all 0.2s;
     cursor: pointer;
   }
-<<<<<<< HEAD
-  .vault-item:hover {
-    border-color: var(--accent);
-    background: rgba(0,212,255,0.04);
-  }
-
-  .vault-item-icon {
-    font-size: 26px;
-=======
   /* While a row's "···" menu is open, lift the whole row above its
      siblings — otherwise a later row (or one mid-hover, which gets its
      own stacking context via `transform`) can paint over an earlier
@@ -994,7 +764,6 @@
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--text2);
->>>>>>> origin/felix
     width: 46px; height: 46px;
     display: flex; align-items: center; justify-content: center;
     background: var(--surface3);
@@ -1004,21 +773,13 @@
 
   .vault-item-body { flex: 1; min-width: 0; }
   .vault-item-name {
-<<<<<<< HEAD
-=======
     display: flex;
     align-items: center;
     gap: 8px;
->>>>>>> origin/felix
     font-family: var(--mono);
     font-size: 14px;
     color: var(--text);
     font-weight: 700;
-<<<<<<< HEAD
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-=======
     min-width: 0;
   }
   .vault-item-filename {
@@ -1026,7 +787,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
->>>>>>> origin/felix
   }
   .vault-item-meta {
     font-family: var(--mono);
@@ -1035,12 +795,6 @@
     margin-top: 3px;
   }
 
-<<<<<<< HEAD
-  .vault-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
-
-  .icon-btn {
-    width: 36px; height: 36px;
-=======
   .vault-item-actions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; justify-content: flex-end; max-width: 100%; }
 
   /* Per-file "···" actions menu — keeps Pin/Download/Share/Labels/Delete
@@ -1108,19 +862,10 @@
   .icon-btn {
     width: auto; height: auto;
     padding: 9px 14px;
->>>>>>> origin/felix
     border-radius: 8px;
     border: 1px solid var(--border2);
     background: var(--surface3);
     color: var(--text2);
-<<<<<<< HEAD
-    font-size: 15px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s;
-  }
-  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
-=======
     font-family: var(--sans);
     font-size: 12px;
     font-weight: 700;
@@ -1131,7 +876,6 @@
   }
   .icon-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
   .icon-btn:active { transform: translateY(0) scale(0.94); }
->>>>>>> origin/felix
   .icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 
   /* Empty state for the vault list */
@@ -1142,14 +886,11 @@
   }
   .empty-state-icon { font-size: 44px; margin-bottom: 12px; opacity: 0.5; }
   .empty-state-text { font-family: var(--mono); font-size: 13px; }
-<<<<<<< HEAD
-=======
   .empty-state-icon.pulse { animation: pulse 1.3s ease-in-out infinite; }
   @keyframes pulse {
     0%, 100% { opacity: 0.3; transform: scale(0.94); }
     50%      { opacity: 0.7; transform: scale(1.04); }
   }
->>>>>>> origin/felix
 
   /* Lock badge on password-protected files */
   .lock-badge {
@@ -1159,10 +900,6 @@
     border: 1px solid var(--warn);
     padding: 2px 6px;
     border-radius: 4px;
-<<<<<<< HEAD
-    margin-left: 8px;
-    letter-spacing: 0.5px;
-=======
     letter-spacing: 0.5px;
     flex-shrink: 0;
   }
@@ -1194,7 +931,6 @@
   .vault-item.pinned {
     border-color: var(--border2);
     box-shadow: inset 2px 0 0 var(--accent);
->>>>>>> origin/felix
   }
 
   /* ── MODAL (password prompt) ── */
@@ -1218,8 +954,6 @@
     max-width: 420px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
   }
-<<<<<<< HEAD
-=======
   .modal.modal-wide { max-width: 480px; }
 
   .labels-list {
@@ -1248,7 +982,6 @@
     display: flex; align-items: center; justify-content: center;
   }
   .label-row-input { flex: 1; }
->>>>>>> origin/felix
   .modal-title {
     font-size: 18px;
     font-weight: 800;
@@ -1266,8 +999,6 @@
     justify-content: flex-end;
     margin-top: 20px;
   }
-<<<<<<< HEAD
-=======
   .modal-error {
     font-family: var(--mono);
     font-size: 12px;
@@ -1283,7 +1014,6 @@
   }
   .password-hint.warn { color: var(--danger); }
   .password-hint.ok   { color: var(--accent3); }
->>>>>>> origin/felix
 
   /* ── TOAST notifications ── */
   .toast-stack {
@@ -1307,13 +1037,8 @@
     animation: fadeIn 0.25s ease;
     max-width: 360px;
   }
-<<<<<<< HEAD
-  .toast.ok  { border-color: rgba(0,255,136,0.4); color: var(--accent3); }
-  .toast.err { border-color: rgba(255,51,102,0.4); color: var(--danger); }
-=======
   .toast.ok  { border-color: rgba(95,168,143,0.4); color: var(--accent3); }
   .toast.err { border-color: rgba(192,104,95,0.4); color: var(--danger); }
->>>>>>> origin/felix
 
   /* Selected-file pill used by the native dialog buttons */
   .picked-file {
@@ -1323,8 +1048,6 @@
     margin-top: 10px;
     word-break: break-all;
   }
-<<<<<<< HEAD
-=======
 
   /* ── COMPRESSION TOGGLE ── */
   .toggle-row {
@@ -1673,4 +1396,3 @@
     .vault-item-filename { white-space: normal; overflow: visible; text-overflow: clip; word-break: break-word; }
     .vault-item-actions { justify-content: flex-start; margin-top: 8px; }
   }
->>>>>>> origin/felix
