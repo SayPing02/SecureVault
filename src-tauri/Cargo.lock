@@ -44,8 +44,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "aes-gcm-siv"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -72,7 +70,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -121,8 +118,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "argon2"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -157,7 +152,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "async-broadcast"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -196,8 +190,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "async-fs"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -209,7 +201,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "async-io"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -239,8 +230,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "async-net"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -252,7 +241,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "async-process"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -364,15 +352,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "base64ct"
 version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
->>>>>>> origin/felix
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -403,8 +388,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "blake2"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -414,7 +397,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -613,8 +595,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "chacha20"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -639,7 +619,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -659,10 +638,7 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common",
  "inout",
-<<<<<<< HEAD
-=======
  "zeroize",
->>>>>>> origin/felix
 ]
 
 [[package]]
@@ -762,8 +738,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "crossbeam-deque"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -783,7 +757,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "crossbeam-utils"
 version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -796,11 +769,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
 dependencies = [
  "generic-array",
-<<<<<<< HEAD
- "rand_core",
-=======
  "rand_core 0.6.4",
->>>>>>> origin/felix
  "typenum",
 ]
 
@@ -1016,8 +985,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "dlib"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1027,7 +994,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "dlopen2"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1066,15 +1032,12 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "downcast-rs"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
->>>>>>> origin/felix
 name = "dpi"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1126,15 +1089,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "either"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
 
 [[package]]
->>>>>>> origin/felix
 name = "embed-resource"
 version = "3.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1716,12 +1676,9 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-<<<<<<< HEAD
-=======
 dependencies = [
  "ahash",
 ]
->>>>>>> origin/felix
 
 [[package]]
 name = "hashbrown"
@@ -2054,8 +2011,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "instant"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2065,7 +2020,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "ipnet"
 version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2263,15 +2217,12 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "libm"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
->>>>>>> origin/felix
 name = "libredox"
 version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2308,8 +2259,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "lru"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2319,7 +2268,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "markup5ever"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2511,13 +2459,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
 dependencies = [
  "bitflags 2.13.0",
-<<<<<<< HEAD
- "dispatch2",
-=======
  "block2",
  "dispatch2",
  "libc",
->>>>>>> origin/felix
  "objc2",
 ]
 
@@ -2606,8 +2550,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "objc2-local-authentication"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2620,7 +2562,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "objc2-quartz-core"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2633,8 +2574,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "objc2-security"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2648,7 +2587,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "objc2-ui-kit"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2766,8 +2704,6 @@ checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
 
 [[package]]
 name = "parking_lot"
-<<<<<<< HEAD
-=======
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
@@ -2779,15 +2715,11 @@ dependencies = [
 
 [[package]]
 name = "parking_lot"
->>>>>>> origin/felix
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
 dependencies = [
  "lock_api",
-<<<<<<< HEAD
- "parking_lot_core",
-=======
  "parking_lot_core 0.9.12",
 ]
 
@@ -2803,7 +2735,6 @@ dependencies = [
  "redox_syscall 0.2.16",
  "smallvec",
  "winapi",
->>>>>>> origin/felix
 ]
 
 [[package]]
@@ -2814,18 +2745,12 @@ checksum = "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
 dependencies = [
  "cfg-if",
  "libc",
-<<<<<<< HEAD
- "redox_syscall",
-=======
  "redox_syscall 0.5.18",
->>>>>>> origin/felix
  "smallvec",
  "windows-link 0.2.1",
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "password-hash"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2837,7 +2762,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2989,8 +2913,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "pollster"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3008,7 +2930,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "polyval"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3159,10 +3080,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ca0ecfa931c29007047d1bc58e623ab12e5590e8c7cc53200d5202b69266d8a"
 dependencies = [
  "libc",
-<<<<<<< HEAD
- "rand_chacha",
- "rand_core",
-=======
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
 ]
@@ -3175,7 +3092,6 @@ checksum = "44c5af06bb1b7d3216d91932aed5265164bf384dc89cd6ba05cf59a35f5f76ea"
 dependencies = [
  "rand_chacha 0.9.0",
  "rand_core 0.9.5",
->>>>>>> origin/felix
 ]
 
 [[package]]
@@ -3185,9 +3101,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
 dependencies = [
  "ppv-lite86",
-<<<<<<< HEAD
- "rand_core",
-=======
  "rand_core 0.6.4",
 ]
 
@@ -3199,7 +3112,6 @@ checksum = "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb"
 dependencies = [
  "ppv-lite86",
  "rand_core 0.9.5",
->>>>>>> origin/felix
 ]
 
 [[package]]
@@ -3212,8 +3124,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "rand_core"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3223,15 +3133,12 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3261,7 +3168,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3293,8 +3199,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "reed-solomon-erasure"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3308,7 +3212,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "ref-cast"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3397,10 +3300,7 @@ version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a15ad77d9e70a92437d8f74c35d99b4e4691128df018833e99f90bcd36152672"
 dependencies = [
-<<<<<<< HEAD
-=======
  "ashpd",
->>>>>>> origin/felix
  "block2",
  "dispatch2",
  "glib-sys",
@@ -3412,13 +3312,9 @@ dependencies = [
  "objc2-app-kit",
  "objc2-core-foundation",
  "objc2-foundation",
-<<<<<<< HEAD
- "raw-window-handle",
-=======
  "pollster",
  "raw-window-handle",
  "urlencoding",
->>>>>>> origin/felix
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -3520,15 +3416,12 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "scoped-tls"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
 
 [[package]]
->>>>>>> origin/felix
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3539,12 +3432,6 @@ name = "securevault"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
-<<<<<<< HEAD
- "base64 0.22.1",
- "dirs 5.0.1",
- "pbkdf2",
- "rand",
-=======
  "aes-gcm-siv",
  "argon2",
  "base64 0.22.1",
@@ -3556,25 +3443,18 @@ dependencies = [
  "rayon",
  "reed-solomon-erasure",
  "rfd",
->>>>>>> origin/felix
  "serde",
  "serde_json",
  "sha2",
  "tauri",
  "tauri-build",
-<<<<<<< HEAD
-=======
  "tauri-plugin-biometry",
->>>>>>> origin/felix
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "tempfile",
  "thiserror 1.0.69",
  "uuid",
-<<<<<<< HEAD
-=======
  "zeroize",
->>>>>>> origin/felix
  "zip",
 ]
 
@@ -3841,11 +3721,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-quartz-core",
  "raw-window-handle",
-<<<<<<< HEAD
- "redox_syscall",
-=======
  "redox_syscall 0.5.18",
->>>>>>> origin/felix
  "tracing",
  "wasm-bindgen",
  "web-sys",
@@ -3879,15 +3755,12 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
->>>>>>> origin/felix
 name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3900,11 +3773,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a18596f8c785a729f2819c0f6a7eae6ebeebdfffbfe4214ae6b087f690e31901"
 dependencies = [
  "new_debug_unreachable",
-<<<<<<< HEAD
- "parking_lot",
-=======
  "parking_lot 0.12.5",
->>>>>>> origin/felix
  "phf_shared",
  "precomputed-hash",
 ]
@@ -4026,11 +3895,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-ui-kit",
  "once_cell",
-<<<<<<< HEAD
- "parking_lot",
-=======
  "parking_lot 0.12.5",
->>>>>>> origin/felix
  "percent-encoding",
  "raw-window-handle",
  "tao-macros",
@@ -4189,8 +4054,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "tauri-plugin-biometry"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4213,7 +4076,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "tauri-plugin-dialog"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4853,15 +4715,12 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "urlencoding"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
->>>>>>> origin/felix
 name = "urlpattern"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5075,8 +4934,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "wayland-backend"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5137,7 +4994,6 @@ dependencies = [
 ]
 
 [[package]]
->>>>>>> origin/felix
 name = "web-sys"
 version = "0.3.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6055,15 +5911,12 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "zeroize"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
 
 [[package]]
->>>>>>> origin/felix
 name = "zerotrie"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6140,10 +5993,7 @@ dependencies = [
  "endi",
  "enumflags2",
  "serde",
-<<<<<<< HEAD
-=======
  "url",
->>>>>>> origin/felix
  "winnow 1.0.3",
  "zvariant_derive",
  "zvariant_utils",
