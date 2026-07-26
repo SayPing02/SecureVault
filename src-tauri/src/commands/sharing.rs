@@ -178,6 +178,7 @@ pub async fn share_vault_file(
             fs::write(&out_path, &zip_bytes)
                 .map_err(|e| format!("could not write share file: {e}"))?;
 
+            storage.log_activity("shared", &filename);
             emit!(100, "Done");
             Ok(OperationResult::ok(
                 format!("Share bundle for '{}' saved to Downloads ({} fragments)", filename, count),
@@ -279,8 +280,11 @@ pub async fn reconstruct_from_fragments(
                     created_at: now_unix(),
                     is_large: true,
                     fragment_labels: Default::default(),
+                    pinned: Default::default(),
+                    last_rotated_at: Default::default(),
                 });
                 storage.save_manifest(&manifest)?;
+                storage.log_activity("reconstructed", &meta.original_filename);
 
                 password.zeroize();
                 emit!(100, "Done");
@@ -370,8 +374,11 @@ pub async fn reconstruct_from_fragments(
                 created_at: now_unix(),
                 is_large: false,
                 fragment_labels: Default::default(),
+                pinned: Default::default(),
+                last_rotated_at: Default::default(),
             });
             storage.save_manifest(&manifest)?;
+            storage.log_activity("reconstructed", &filename);
 
             emit!(100, "Done");
             Ok(OperationResult::ok(

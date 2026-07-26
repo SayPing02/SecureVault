@@ -47,4 +47,12 @@ impl AppState {
     pub fn set_storage(&self, storage: Storage) {
         *self.storage.lock().unwrap() = Some(Arc::new(storage));
     }
+
+    /// Drop the in-memory storage handle, e.g. for the auto-lock timer.
+    /// Any operation already running keeps its own `Arc<Storage>` clone
+    /// (captured before this runs) and finishes normally — only *new*
+    /// commands see the vault as locked afterward.
+    pub fn clear_storage(&self) {
+        *self.storage.lock().unwrap() = None;
+    }
 }

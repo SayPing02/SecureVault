@@ -99,6 +99,15 @@ pub struct VaultEntry {
     // -> "Mom's laptop"), purely informational — never affects reconstruction.
     #[serde(default)]
     pub fragment_labels: HashMap<u8, String>,
+    // Kept at the top of "My Files" — purely a display preference.
+    #[serde(default)]
+    pub pinned: bool,
+    // Unix seconds of the last rotation (fresh Shamir polynomial + fresh
+    // fragments), or the same as created_at if never rotated. 0 for entries
+    // saved before this field existed — treat that as "use created_at" when
+    // computing staleness, rather than as an actual timestamp.
+    #[serde(default)]
+    pub last_rotated_at: u64,
 }
 
 // The manifest stores all vault entries
@@ -127,5 +136,36 @@ impl Manifest {
         let before = self.entries.len();
         self.entries.retain(|e| e.file_id != file_id);
         self.entries.len() != before
+    }
+}
+
+// A single line in the activity log — "added / downloaded / shared / deleted
+// / reconstructed <filename> at <timestamp>". Purely a local history for the
+// user's own reference, same as fragment labels; never read by any
+// crypto/reconstruction path.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityEntry {
+    pub timestamp: u64,
+    pub action: String, // "added" | "downloaded" | "shared" | "deleted" | "reconstructed"
+    pub filename: String,
+}
+
+// Saved as activity_log.json (encrypted) in the vault folder, same as the manifest.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ActivityLog {
+    pub entries: Vec<ActivityEntry>,
+}
+
+impl ActivityLog {
+    // Newest first; capped so the log can't grow forever.
+    pub const MAX_ENTRIES: usize = 200;
+
+    pub fn record(&mut self, action: impl Into<String>, filename: impl Into<String>, timestamp: u64) {
+        self.entries.insert(0, ActivityEntry {
+            timestamp,
+            action: action.into(),
+            filename: filename.into(),
+        });
+        self.entries.truncate(Self::MAX_ENTRIES);
     }
 }

@@ -1,6 +1,7 @@
 // Commands for vault operations: split, list, download, delete
 
-use crate::commands::dto::{OperationResult, SplitRequest, VaultFileDto};
+use crate::commands::dto::{ActivityEntryDto, CipherRecommendationDto, OperationResult, SplitRequest, VaultFileDto};
+use crate::core::crypto;
 use crate::core::fragmenter;
 use crate::core::large_fragment::{self, LARGE_FILE_THRESHOLD};
 use crate::core::model::{SplitParams, VaultEntry};
@@ -43,6 +44,31 @@ pub fn get_file_size(file_path: String) -> Result<u64, String> {
         return Err("that's a folder (or an app bundle), not a single file — please pick a regular file".into());
     }
     Ok(meta.len())
+}
+
+/// Suggests a cipher for the frontend to pre-select, based on the file's
+/// size and whether this CPU has AES hardware acceleration. Purely advisory
+/// — every cipher works regardless, so this only affects the default the
+/// user sees, not correctness.
+#[tauri::command]
+pub fn recommend_cipher(file_size: u64) -> CipherRecommendationDto {
+    if file_size >= LARGE_FILE_THRESHOLD {
+        return CipherRecommendationDto {
+            cipher: crypto::CIPHER_XCHACHA20POLY.to_string(),
+            reason: "Best fit for large files — no speed cost, and safe even after generating many nonces.".to_string(),
+        };
+    }
+    if crypto::has_hardware_aes() {
+        CipherRecommendationDto {
+            cipher: crypto::CIPHER_AES256GCM.to_string(),
+            reason: "Your device has AES hardware acceleration.".to_string(),
+        }
+    } else {
+        CipherRecommendationDto {
+            cipher: crypto::CIPHER_CHACHA20POLY.to_string(),
+            reason: "Faster than AES on this device.".to_string(),
+        }
+    }
 }
 
 fn now_unix() -> u64 {
@@ -151,8 +177,11 @@ pub async fn split_and_store(
                     created_at: now_unix(),
                     is_large: true,
                     fragment_labels: Default::default(),
+                    pinned: Default::default(),
+                    last_rotated_at: now_unix(),
                 });
                 storage.save_manifest(&manifest)?;
+                storage.log_activity("added", &filename);
 
                 emit!(100, "done", "Done!");
                 Ok(OperationResult::ok(
@@ -235,8 +264,11 @@ pub async fn split_and_store(
                     created_at: now_unix(),
                     is_large: false,
                     fragment_labels: Default::default(),
+                    pinned: Default::default(),
+                    last_rotated_at: now_unix(),
                 });
                 storage.save_manifest(&manifest)?;
+                storage.log_activity("added", &filename);
 
                 emit!(100, "done", "Done!");
                 Ok(OperationResult::ok(
@@ -266,6 +298,44 @@ pub async fn split_and_store(
     .map_err(|e| format!("background task failed: {e}"))?
 }
 
+/// Re-split a vault file with a brand-new random Shamir polynomial (or fresh
+/// Reed-Solomon shards, for large files) — the "rotate" action. Old fragments
+/// still out there (a USB drive, a friend's laptop, wherever) become useless
+/// against the new set immediately, since mixing them with new fragments
+/// fails to decrypt rather than quietly reconstructing anything. See
+/// core::rotation for the actual logic and its safety guarantees.
+#[tauri::command]
+pub async fn rotate_vault_file(
+    file_id: String,
+    mut password: Option<String>,
+    _state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<OperationResult, String> {
+    spawn_blocking(move || -> Result<OperationResult, String> {
+        let storage: Arc<_> = app.state::<AppState>().storage()?;
+        let pw = password.as_deref().filter(|p| !p.is_empty());
+
+        let mut manifest = storage.load_manifest()?;
+        let entry = manifest.entries.iter().find(|e| e.file_id == file_id).cloned()
+            .ok_or_else(|| "file not found in vault".to_string())?;
+
+        let updated = crate::core::rotation::rotate(&storage, &entry, pw)?;
+        password.zeroize();
+
+        let filename = updated.filename.clone();
+        manifest.upsert(updated);
+        storage.save_manifest(&manifest)?;
+        storage.log_activity("rotated", &filename);
+
+        Ok(OperationResult::ok(
+            format!("'{filename}' rotated — old fragments are no longer valid"),
+            None,
+        ))
+    })
+    .await
+    .map_err(|e| format!("background task failed: {e}"))?
+}
+
 #[tauri::command]
 pub fn list_vault_files(
     state: State<'_, AppState>,
@@ -283,9 +353,34 @@ pub fn list_vault_files(
         created_at: e.created_at,
         is_large: e.is_large,
         fragment_labels: e.fragment_labels,
+        pinned: e.pinned,
+        // 0 means "never rotated" (entry predates this field) — fall back
+        // to created_at so staleness can still be computed sensibly.
+        last_rotated_at: if e.last_rotated_at == 0 { e.created_at } else { e.last_rotated_at },
     }).collect();
 
     Ok(files)
+}
+
+// History of add/download/share/delete/reconstruct events, newest first.
+// Purely a local record for the user's own reference — same status as
+// fragment labels, never read by any crypto or reconstruction path.
+#[tauri::command]
+pub fn get_activity_log(state: State<'_, AppState>) -> Result<Vec<ActivityEntryDto>, String> {
+    let storage = state.storage()?;
+    let log = storage.load_activity_log()?;
+    Ok(log.entries.into_iter().map(|e| ActivityEntryDto {
+        timestamp: e.timestamp,
+        action: e.action,
+        filename: e.filename,
+    }).collect())
+}
+
+#[tauri::command]
+pub fn clear_activity_log(state: State<'_, AppState>) -> Result<(), String> {
+    let storage = state.storage()?;
+    storage.save_activity_log(&crate::core::model::ActivityLog::default())?;
+    Ok(())
 }
 
 // Checks whether each stored fragment/shard for a vault file can still be
@@ -428,6 +523,7 @@ pub async fn download_vault_file(
                     },
                 )?;
                 password.zeroize();
+                storage.log_activity("downloaded", &meta.original_filename);
                 emit!(100, "Done");
                 Ok(OperationResult::ok(
                     format!("'{}' saved to Downloads", meta.original_filename),
@@ -462,6 +558,7 @@ pub async fn download_vault_file(
                 fs::write(&out_path, &file_bytes)
                     .map_err(|e| format!("could not save file: {e}"))?;
 
+                storage.log_activity("downloaded", filename);
                 emit!(100, "Done");
                 Ok(OperationResult::ok(
                     format!("'{}' saved to Downloads", filename),
@@ -494,8 +591,13 @@ pub fn delete_vault_file(
 
     storage.delete_fragments(&file_id)?;
     let mut manifest = storage.load_manifest()?;
+    let filename = manifest.entries.iter()
+        .find(|e| e.file_id == file_id)
+        .map(|e| e.filename.clone())
+        .unwrap_or_else(|| file_id.clone());
     manifest.remove(&file_id);
     storage.save_manifest(&manifest)?;
+    storage.log_activity("deleted", &filename);
 
     Ok(OperationResult::ok("File removed from vault", None))
 }
@@ -522,6 +624,30 @@ pub fn update_fragment_labels(
 
     storage.save_manifest(&manifest)?;
     Ok(OperationResult::ok("Fragment labels updated", None))
+}
+
+// Keep a file pinned to the top of "My Files" — purely a display
+// preference, doesn't touch fragments or the encryption key in any way.
+#[tauri::command]
+pub fn set_file_pinned(
+    file_id: String,
+    pinned: bool,
+    state: State<'_, AppState>,
+) -> Result<OperationResult, String> {
+    let storage = state.storage()?;
+    let mut manifest = storage.load_manifest()?;
+
+    let entry = manifest.entries.iter_mut()
+        .find(|e| e.file_id == file_id)
+        .ok_or_else(|| "file not found in vault".to_string())?;
+
+    entry.pinned = pinned;
+
+    storage.save_manifest(&manifest)?;
+    Ok(OperationResult::ok(
+        if pinned { "File pinned" } else { "File unpinned" },
+        None,
+    ))
 }
 
 // Turn a user-supplied display name into a safe single-component filename:

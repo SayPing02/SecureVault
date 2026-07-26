@@ -379,10 +379,15 @@ pub fn reconstruct_large_file_with_progress<F: FnMut(u8, &str)>(
 
     on_progress(6, "Decoding chunks…");
 
+    // Nonce width depends on the file's cipher (XChaCha20 is wider than the
+    // others) — same width was used to write every chunk record, so this is
+    // known upfront from the already-read header.
+    let nonce_len = crypto::nonce_len_for_cipher(&meta.cipher);
+
     for chunk_idx in 0..meta.chunk_count {
         ctl.checkpoint()?;
         // Read the chunk record from the first reader to learn nonce + shard_size
-        let mut nonce = [0u8; crypto::NONCE_LEN];
+        let mut nonce = vec![0u8; nonce_len];
         let mut enc_len_buf = [0u8; 4];
         readers[0].1.read_exact(&mut nonce)?;
         readers[0].1.read_exact(&mut enc_len_buf)?;
@@ -398,7 +403,7 @@ pub fn reconstruct_large_file_with_progress<F: FnMut(u8, &str)>(
 
         for r in readers.iter_mut().skip(1) {
             // Skip duplicate nonce + enc_len (same for every fragment of this chunk)
-            let mut _nonce2   = [0u8; crypto::NONCE_LEN];
+            let mut _nonce2   = vec![0u8; nonce_len];
             let mut _enc_len2 = [0u8; 4];
             r.1.read_exact(&mut _nonce2)?;
             r.1.read_exact(&mut _enc_len2)?;
@@ -790,7 +795,11 @@ mod tests {
     }
 
     fn roundtrip(size: usize, padding_pct: u8, compress: bool, password: Option<&str>) {
-        let dir = std::env::temp_dir().join(format!("svtest_{}_{}_{}", size, padding_pct, compress));
+        roundtrip_cipher(size, padding_pct, compress, password, "aes256gcm");
+    }
+
+    fn roundtrip_cipher(size: usize, padding_pct: u8, compress: bool, password: Option<&str>, cipher: &str) {
+        let dir = std::env::temp_dir().join(format!("svtest_{}_{}_{}_{}_{}", size, padding_pct, compress, cipher, uuid::Uuid::new_v4()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let in_path = dir.join("in.bin");
@@ -802,7 +811,7 @@ mod tests {
             threshold: 3,
             password: password.map(|s| s.to_string()),
             compress,
-            cipher: "aes256gcm".to_string(),
+            cipher: cipher.to_string(),
             kdf: "standard".to_string(),
             padding_pct,
         };
@@ -856,6 +865,20 @@ mod tests {
     #[test]
     fn test_all_options() {
         roundtrip(CHUNK_SIZE * 3 + 777, 15, true, Some("pw"));
+    }
+
+    // XChaCha20 has a wider (24-byte, vs 12) nonce than every other cipher —
+    // exercise it across multiple chunks specifically to catch any per-chunk
+    // framing bug in the streaming read/write (each chunk's nonce is written
+    // and read back individually, unlike the small-file path's single nonce).
+    #[test]
+    fn test_xchacha20_multi_chunk_roundtrip() {
+        roundtrip_cipher(CHUNK_SIZE * 3 + 777, 15, true, Some("pw"), "xchacha20");
+    }
+
+    #[test]
+    fn test_aes_gcm_siv_multi_chunk_roundtrip() {
+        roundtrip_cipher(CHUNK_SIZE * 3 + 777, 15, true, Some("pw"), "aesgcmsiv");
     }
 
     #[test]

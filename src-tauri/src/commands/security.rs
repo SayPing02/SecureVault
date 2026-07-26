@@ -28,6 +28,16 @@ const KEYCHAIN_NAME: &str = "vault-secret";
 const PIN_KDF: &str = crypto::KDF_ARGON2ID;
 const MIN_PIN_LENGTH: usize = 4;
 
+// PIN lockout: Argon2id already makes each guess slow, but that alone isn't
+// a real limit on total guesses over time. The first few wrong attempts are
+// free (typos happen); past that, lockout duration doubles each additional
+// failure, capped at an hour. This state lives on disk in the same flag
+// file as the PIN itself, not in memory, specifically so restarting the app
+// doesn't reset the counter.
+const PIN_LOCKOUT_FREE_ATTEMPTS: u32 = 5;
+const PIN_LOCKOUT_BASE_SECS: u64 = 30;
+const PIN_LOCKOUT_MAX_SECS: u64 = 3600;
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct SecurityFlag {
     #[serde(default)]
@@ -41,6 +51,17 @@ struct SecurityFlag {
     pin_nonce_b64: Option<String>,
     #[serde(default)]
     pin_wrapped_secret_b64: Option<String>,
+    // Minutes of inactivity before auto re-lock; 0 = never. Independent of
+    // which lock method is active, so it survives toggling between them.
+    #[serde(default)]
+    auto_lock_minutes: u32,
+    // Consecutive wrong-PIN guesses since the last success, and the Unix-ms
+    // timestamp until which further attempts are refused. Reset on success
+    // or whenever the PIN is (re-)enabled.
+    #[serde(default)]
+    failed_pin_attempts: u32,
+    #[serde(default)]
+    pin_locked_until_ms: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -52,6 +73,7 @@ pub struct SecurityStatusDto {
     pub biometric_enabled: bool,
     pub pin_enabled: bool,
     pub vault_locked: bool,
+    pub auto_lock_minutes: u32,
 }
 
 fn flag_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -106,6 +128,51 @@ fn unwrap_secret_with_pin(flag: &SecurityFlag, pin: &str) -> Result<[u8; 32], St
     Ok(secret)
 }
 
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+/// `unwrap_secret_with_pin`, but backed by a persisted attempt counter and
+/// exponential-backoff lockout — see `PIN_LOCKOUT_*` above. Every PIN-gated
+/// command (unlock, disable) should go through this, not the raw unwrap.
+fn unlock_with_pin_guarded(app: &AppHandle, pin: &str) -> Result<[u8; 32], String> {
+    let mut flag = read_flag(app);
+
+    if let Some(until) = flag.pin_locked_until_ms {
+        let now = now_ms();
+        if now < until {
+            let remaining = (until - now).div_ceil(1000);
+            return Err(format!(
+                "too many incorrect attempts — try again in {remaining}s"
+            ));
+        }
+    }
+
+    match unwrap_secret_with_pin(&flag, pin) {
+        Ok(secret) => {
+            if flag.failed_pin_attempts != 0 || flag.pin_locked_until_ms.is_some() {
+                flag.failed_pin_attempts = 0;
+                flag.pin_locked_until_ms = None;
+                let _ = write_flag(app, &flag);
+            }
+            Ok(secret)
+        }
+        Err(e) => {
+            flag.failed_pin_attempts += 1;
+            if flag.failed_pin_attempts >= PIN_LOCKOUT_FREE_ATTEMPTS {
+                let extra = (flag.failed_pin_attempts - PIN_LOCKOUT_FREE_ATTEMPTS).min(7);
+                let secs = (PIN_LOCKOUT_BASE_SECS << extra).min(PIN_LOCKOUT_MAX_SECS);
+                flag.pin_locked_until_ms = Some(now_ms() + secs * 1000);
+            }
+            let _ = write_flag(app, &flag);
+            Err(e)
+        }
+    }
+}
+
 fn biometry_label(app: &AppHandle) -> String {
     if cfg!(target_os = "macos") {
         match app.biometry().status() {
@@ -130,7 +197,29 @@ pub fn security_status(state: State<'_, AppState>, app: AppHandle) -> Result<Sec
         biometric_enabled: flag.biometric_enabled,
         pin_enabled: flag.pin_enabled,
         vault_locked: !state.is_unlocked(),
+        auto_lock_minutes: flag.auto_lock_minutes,
     })
+}
+
+/// Re-lock the vault immediately — drops the in-memory key (see
+/// `AppState::clear_storage`) so it's a real lock, not a UI overlay. Refuses
+/// if no lock method is set up, since that would leave no way back in.
+#[tauri::command]
+pub fn lock_vault(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+    let flag = read_flag(&app);
+    if !flag.biometric_enabled && !flag.pin_enabled {
+        return Err("no lock method is set up".to_string());
+    }
+    state.clear_storage();
+    Ok(())
+}
+
+/// Persist how long the app can sit idle before auto-locking. 0 = never.
+#[tauri::command]
+pub fn set_auto_lock_minutes(minutes: u32, app: AppHandle) -> Result<(), String> {
+    let mut flag = read_flag(&app);
+    flag.auto_lock_minutes = minutes;
+    write_flag(&app, &flag)
 }
 
 #[tauri::command]
@@ -175,7 +264,13 @@ pub async fn enable_biometric_lock(app: AppHandle) -> Result<(), String> {
         format!("the secret was copied to the keychain, but the old plaintext copy on disk could not be removed: {e}")
     })?;
 
-    write_flag(&app, &SecurityFlag { biometric_enabled: true, ..Default::default() })
+    let mut flag = read_flag(&app);
+    flag.biometric_enabled = true;
+    flag.pin_enabled = false;
+    flag.pin_salt_b64 = None;
+    flag.pin_nonce_b64 = None;
+    flag.pin_wrapped_secret_b64 = None;
+    write_flag(&app, &flag)
 }
 
 #[tauri::command]
@@ -207,7 +302,9 @@ pub async fn disable_biometric_lock(state: State<'_, AppState>, app: AppHandle) 
         .remove_data(DataOptions { domain: KEYCHAIN_DOMAIN.to_string(), name: KEYCHAIN_NAME.to_string() })
         .map_err(|e| e.to_string())?;
 
-    write_flag(&app, &SecurityFlag::default())
+    let mut flag = read_flag(&app);
+    flag.biometric_enabled = false;
+    write_flag(&app, &flag)
 }
 
 // --- PIN lock ---
@@ -240,13 +337,15 @@ pub fn enable_pin_lock(pin: String, app: AppHandle) -> Result<(), String> {
     fs::remove_file(&secret_path)
         .map_err(|e| format!("could not remove the old plaintext secret file: {e}"))?;
 
-    write_flag(&app, &SecurityFlag {
-        pin_enabled: true,
-        pin_salt_b64: Some(B64.encode(salt)),
-        pin_nonce_b64: Some(B64.encode(encrypted.nonce)),
-        pin_wrapped_secret_b64: Some(B64.encode(&encrypted.ciphertext)),
-        ..Default::default()
-    })
+    let mut flag = read_flag(&app);
+    flag.pin_enabled = true;
+    flag.biometric_enabled = false;
+    flag.pin_salt_b64 = Some(B64.encode(salt));
+    flag.pin_nonce_b64 = Some(B64.encode(encrypted.nonce));
+    flag.pin_wrapped_secret_b64 = Some(B64.encode(&encrypted.ciphertext));
+    flag.failed_pin_attempts = 0;
+    flag.pin_locked_until_ms = None;
+    write_flag(&app, &flag)
 }
 
 #[tauri::command]
@@ -255,14 +354,20 @@ pub fn disable_pin_lock(pin: String, state: State<'_, AppState>, app: AppHandle)
         return Err("an operation is still running — wait for it to finish before disabling the PIN".to_string());
     }
 
-    let flag = read_flag(&app);
-    let secret = unwrap_secret_with_pin(&flag, &pin)?;
+    let secret = unlock_with_pin_guarded(&app, &pin)?;
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     fs::write(app_data_dir.join(APP_SECRET_NAME), &secret)
         .map_err(|e| format!("could not restore the plaintext secret file: {e}"))?;
 
-    write_flag(&app, &SecurityFlag::default())
+    let mut new_flag = read_flag(&app);
+    new_flag.pin_enabled = false;
+    new_flag.pin_salt_b64 = None;
+    new_flag.pin_nonce_b64 = None;
+    new_flag.pin_wrapped_secret_b64 = None;
+    new_flag.failed_pin_attempts = 0;
+    new_flag.pin_locked_until_ms = None;
+    write_flag(&app, &new_flag)
 }
 
 /// Same role as `unlock_vault_with_biometric`, gated by a PIN instead.
@@ -272,8 +377,7 @@ pub fn unlock_vault_with_pin(pin: String, state: State<'_, AppState>, app: AppHa
         return Ok(());
     }
 
-    let flag = read_flag(&app);
-    let secret = unwrap_secret_with_pin(&flag, &pin)?;
+    let secret = unlock_with_pin_guarded(&app, &pin)?;
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let storage = Storage::from_secret(&app_data_dir, secret).map_err(|e| e.to_string())?;

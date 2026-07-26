@@ -207,19 +207,16 @@ pub fn reconstruct_file_with_progress<F: FnMut(u8, &str)>(
 
     on_progress(50, "Decrypting file…");
 
-    // step 3: decrypt the actual file
+    // step 3: decrypt the actual file — nonce length depends on the cipher
+    // (XChaCha20 uses a wider nonce than the others), so let decrypt_file
+    // validate it rather than assuming a fixed size here.
     let nonce_bytes = B64.decode(&first.nonce_b64)
         .map_err(|e| CoreError::InvalidFragment(format!("bad nonce: {e}")))?;
-    if nonce_bytes.len() != crypto::NONCE_LEN {
-        return Err(CoreError::InvalidFragment("nonce wrong length".into()));
-    }
-    let mut nonce = [0u8; crypto::NONCE_LEN];
-    nonce.copy_from_slice(&nonce_bytes);
 
     let ciphertext = B64.decode(&first.ciphertext_b64)
         .map_err(|e| CoreError::InvalidFragment(format!("bad ciphertext: {e}")))?;
 
-    let decrypted = crypto::decrypt_file(&first.cipher, &file_key, &nonce, &ciphertext)?;
+    let decrypted = crypto::decrypt_file(&first.cipher, &file_key, &nonce_bytes, &ciphertext)?;
     file_key.zeroize();
 
     on_progress(80, "Decompressing…");
@@ -340,12 +337,16 @@ mod tests {
     use super::*;
 
     fn make_params(n: u8, k: u8, pw: Option<&str>) -> SplitParams {
+        make_params_cipher(n, k, pw, "aes256gcm")
+    }
+
+    fn make_params_cipher(n: u8, k: u8, pw: Option<&str>, cipher: &str) -> SplitParams {
         SplitParams {
             total_fragments: n,
             threshold:       k,
             password:        pw.map(|s| s.to_string()),
             compress:        false,
-            cipher:          "aes256gcm".to_string(),
+            cipher:          cipher.to_string(),
             kdf:             "standard".to_string(),
             padding_pct:     0,
         }
@@ -357,6 +358,26 @@ mod tests {
         let frags = split_file(data, "secret.txt", &make_params(5, 3, None)).unwrap();
         assert_eq!(frags.len(), 5);
 
+        let recovered = reconstruct_file(&frags[0..3], None).unwrap();
+        assert_eq!(recovered, data);
+    }
+
+    // XChaCha20's 24-byte nonce is wider than every other cipher's — this
+    // exercises the base64 round trip through Fragment.nonce_b64 without the
+    // fixed-12-byte assumption the small-file decrypt path used to have.
+    #[test]
+    fn test_split_reconstruct_xchacha20() {
+        let data = b"wide-nonce cipher payload, must not get truncated";
+        let frags = split_file(data, "wide.bin", &make_params_cipher(5, 3, Some("hunter2"), "xchacha20")).unwrap();
+        assert_eq!(frags[0].cipher, "xchacha20");
+        let recovered = reconstruct_file(&frags[0..3], Some("hunter2")).unwrap();
+        assert_eq!(recovered, data);
+    }
+
+    #[test]
+    fn test_split_reconstruct_aes_gcm_siv() {
+        let data = b"nonce-misuse-resistant cipher payload";
+        let frags = split_file(data, "siv.bin", &make_params_cipher(5, 3, None, "aesgcmsiv")).unwrap();
         let recovered = reconstruct_file(&frags[0..3], None).unwrap();
         assert_eq!(recovered, data);
     }

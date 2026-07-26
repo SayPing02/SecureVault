@@ -72,13 +72,18 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::vault::get_file_size,
+            commands::vault::recommend_cipher,
             commands::vault::split_and_store,
+            commands::vault::rotate_vault_file,
             commands::vault::list_vault_files,
+            commands::vault::get_activity_log,
+            commands::vault::clear_activity_log,
             commands::vault::check_vault_file_integrity,
             commands::vault::verify_file_password,
             commands::vault::download_vault_file,
             commands::vault::delete_vault_file,
             commands::vault::update_fragment_labels,
+            commands::vault::set_file_pinned,
             commands::sharing::share_vault_file,
             commands::sharing::reconstruct_from_fragments,
             commands::sharing::verify_fragment_password,
@@ -93,6 +98,10 @@ pub fn run() {
             commands::security::enable_pin_lock,
             commands::security::disable_pin_lock,
             commands::security::unlock_vault_with_pin,
+            commands::security::lock_vault,
+            commands::security::set_auto_lock_minutes,
+            commands::backup::export_vault_backup,
+            commands::backup::import_vault_backup,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

@@ -41,15 +41,18 @@
   <div class="logo-text">Secure<span>Vault</span></div>
 </header>
 
-<div class="app">
+<div class="app-shell">
 
-  <!-- ════════════════════════════ TABS ════════════════════════════ -->
-  <div class="tabs">
+  <!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
+  <nav class="sidebar">
     <button class="tab active" data-tab="vault">My Files</button>
     <button class="tab" data-tab="split">Add File</button>
     <button class="tab" data-tab="import">Reconstruct</button>
+    <button class="tab" data-tab="activity">Activity</button>
     <button class="tab" data-tab="settings">Settings</button>
-  </div>
+  </nav>
+
+  <div class="app">
 
   <!-- ════════════════════════ VAULT PANEL ════════════════════════ -->
   <div id="panel-vault" class="panel active">
@@ -162,7 +165,21 @@
       <div class="form-row single">
         <div>
           <label>Encryption Cipher</label>
-          <div class="cipher-grid" id="cipherGrid">
+
+          <!-- Default view: one recommended cipher, pre-selected. Most users
+               never need to open the full picker. -->
+          <div class="cipher-collapsed" id="cipherCollapsed">
+            <div class="cipher-collapsed-info">
+              <div class="cipher-collapsed-name-row">
+                <span class="cipher-collapsed-name" id="cipherCollapsedName">AES-256-GCM</span>
+                <span class="cipher-badge">Recommended</span>
+              </div>
+              <div class="cipher-collapsed-reason" id="cipherCollapsedReason">Industry-standard, hardware-accelerated on most devices.</div>
+            </div>
+            <button type="button" class="btn btn-secondary" id="cipherChangeBtn">Change</button>
+          </div>
+
+          <div class="cipher-grid hidden" id="cipherGrid">
             <label class="cipher-card selected" data-value="aes256gcm">
               <input type="radio" name="cipher" value="aes256gcm" checked hidden>
               <div class="cipher-name">AES-256-GCM</div>
@@ -172,6 +189,16 @@
               <input type="radio" name="cipher" value="chacha20" hidden>
               <div class="cipher-name">ChaCha20-Poly1305</div>
               <div class="cipher-desc">Faster on devices without AES hardware (ARM, older CPUs).</div>
+            </label>
+            <label class="cipher-card" data-value="xchacha20">
+              <input type="radio" name="cipher" value="xchacha20" hidden>
+              <div class="cipher-name">XChaCha20-Poly1305</div>
+              <div class="cipher-desc">Same as ChaCha20 but with a wider nonce — removes any theoretical risk from reusing a key many times.</div>
+            </label>
+            <label class="cipher-card" data-value="aesgcmsiv">
+              <input type="radio" name="cipher" value="aesgcmsiv" hidden>
+              <div class="cipher-name">AES-256-GCM-SIV</div>
+              <div class="cipher-desc">Nonce-misuse resistant — degrades safely instead of catastrophically if a nonce is ever repeated.</div>
             </label>
           </div>
         </div>
@@ -206,10 +233,11 @@
         </div>
       </div>
 
-      <!-- KDF selection (always visible, clearly labelled as password-only) -->
-      <div class="form-row single">
+      <!-- KDF selection — only meaningful once a password is set, so it
+           stays hidden until the password field has something in it. -->
+      <div class="form-row single hidden" id="kdfSection">
         <div>
-          <label>Password Key Strength <span class="toggle-hint">Only applies when a password is set above.</span></label>
+          <label>Password Key Strength</label>
           <div class="kdf-grid" id="kdfGrid">
             <label class="kdf-card" data-value="fast">
               <input type="radio" name="kdf" value="fast" hidden>
@@ -320,6 +348,23 @@
     </div>
   </div>
 
+  <!-- ════════════════════════ ACTIVITY PANEL ════════════════════════ -->
+  <div id="panel-activity" class="panel">
+    <div class="section-title">Activity</div>
+    <div class="section-sub">// History of vault actions on this device</div>
+
+    <div class="card">
+      <div class="card-title">Recent Activity</div>
+      <div id="activityList" class="console activity-console">
+        <!-- populated by main.js -->
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="btnClearActivity">Clear Activity Log</button>
+    </div>
+  </div>
+
   <!-- ════════════════════════ SETTINGS PANEL ════════════════════════ -->
   <div id="panel-settings" class="panel">
     <div class="section-title">Settings</div>
@@ -352,8 +397,40 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
+
+      <div class="toggle-row" style="margin-top: 18px;">
+        <div class="toggle-label">
+          <span>Auto-Lock</span>
+          <span class="toggle-hint" id="autoLockHint">
+            Set up Touch ID or a PIN first.
+          </span>
+        </div>
+        <select id="autoLockSelect" disabled>
+          <option value="0">Never</option>
+          <option value="1">1 minute</option>
+          <option value="5">5 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-title">Backup &amp; Restore</div>
+      <div class="toggle-hint" style="margin-bottom: 14px;">
+        Your vault only exists on this device. Back it up to a file you can store
+        on a USB drive or cloud folder — protected by its own password, separate
+        from your PIN — so a disk failure doesn't mean losing everything.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="backupExportBtn">Back Up Vault…</button>
+        <button class="btn btn-secondary" id="backupImportBtn">Restore from Backup…</button>
+      </div>
     </div>
   </div>
+
+  </div>
+</div>
 
 <!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
 <div id="passwordModal" class="modal-overlay hidden">
@@ -432,6 +509,33 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" id="pinSetupCancel">Cancel</button>
       <button class="btn btn-primary" id="pinSetupConfirm">Enable</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ BACKUP PASSWORD MODAL ════════════════════════ -->
+<div id="backupPasswordModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Protect This Backup</div>
+    <div class="modal-sub">
+      Choose a password for this backup file — separate from your PIN. Anyone with
+      the file and this password can read everything in it, and there's no way to
+      recover it if you forget the password.
+    </div>
+    <div>
+      <label>Backup Password</label>
+      <input type="password" id="backupPasswordInput" placeholder="At least 8 characters">
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>Confirm Password</label>
+        <input type="password" id="backupPasswordConfirmInput" placeholder="Re-enter the password">
+      </div>
+    </div>
+    <div class="modal-error hidden" id="backupPasswordError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="backupPasswordCancel">Cancel</button>
+      <button class="btn btn-primary" id="backupPasswordConfirm">Continue</button>
     </div>
   </div>
 </div>
