@@ -32,7 +32,9 @@
       <button class="btn btn-primary" id="btnUnlockPin">Unlock</button>
     </div>
 
-    <div class="modal-error hidden" id="lockScreenError"></div>
+    <button class="link-btn hidden" id="btnForgotPin">Forgot your PIN?</button>
+
+    <div class="modal-error hidden" role="alert" id="lockScreenError"></div>
   </div>
 </div>
 
@@ -50,6 +52,7 @@
     <button class="tab" data-tab="import">Reconstruct</button>
     <button class="tab" data-tab="activity">Activity</button>
     <button class="tab" data-tab="settings">Settings</button>
+    <button class="tab" data-tab="help">Help</button>
   </nav>
 
   <div class="app">
@@ -300,10 +303,10 @@
   <!-- ════════════════════════ IMPORT PANEL ════════════════════════ -->
   <div id="panel-import" class="panel">
     <div class="section-title">Reconstruct from Fragments</div>
-    <div class="section-sub">// Select individual .svf or .svf3 fragment files to reconstruct a file</div>
+    <div class="section-sub">// Select fragment files, or a share bundle, to reconstruct a file</div>
 
     <div class="info-box">
-      <span>Select <strong>individual fragment files</strong>.</span>
+      <span>Select <strong>individual fragment files</strong>, or drop in a <strong>-share.zip</strong> bundle and its fragments are read out automatically.</span>
     </div>
 
     <div class="card">
@@ -311,7 +314,7 @@
       <div class="drop-zone" id="importDropZone">
         <div id="importDropContent">
           <div class="drop-text">Click to browse for fragment files</div>
-          <div class="drop-sub">Select multiple .svf or .svf3 files</div>
+          <div class="drop-sub">Multiple .svf / .svf3 files, or a -share.zip bundle</div>
         </div>
       </div>
       <div id="importPickedFiles" class="picked-file hidden"></div>
@@ -400,6 +403,16 @@
 
       <div class="toggle-row" style="margin-top: 18px;">
         <div class="toggle-label">
+          <span>Recovery Code</span>
+          <span class="toggle-hint" id="recoveryCodeHint">
+            Turn on a PIN or Touch ID to get a recovery code.
+          </span>
+        </div>
+        <button class="btn btn-secondary" id="btnRegenerateRecovery" disabled>Replace…</button>
+      </div>
+
+      <div class="toggle-row" style="margin-top: 18px;">
+        <div class="toggle-label">
           <span>Auto-Lock</span>
           <span class="toggle-hint" id="autoLockHint">
             Set up Touch ID or a PIN first.
@@ -429,19 +442,154 @@
     </div>
   </div>
 
+  <!-- ════════════════════════ HELP PANEL ════════════════════════ -->
+  <div id="panel-help" class="panel">
+    <div class="section-title">Help</div>
+    <div class="section-sub">// Answers to the common questions, and how to get in touch</div>
+
+    <div class="card">
+      <div class="card-title">Frequently Asked</div>
+
+      <details class="faq-item">
+        <summary>Does SecureVault need an internet connection?</summary>
+        <div class="faq-answer">
+          No. Splitting, encryption and reconstruction all happen on this device.
+          There are no accounts and no servers, so there is nothing to sign in to
+          and nothing sent anywhere.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>What happens if I forget my PIN?</summary>
+        <div class="faq-answer">
+          Use your recovery code. On the lock screen choose <strong>Forgot your
+          PIN?</strong>, enter the code, and set a new PIN.
+          <br><br>
+          If you never saved a recovery code, a forgotten PIN cannot be
+          recovered. Your PIN is never stored anywhere — there is nothing to look
+          up, by you or by anyone else.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>I've lost my recovery code. What should I do?</summary>
+        <div class="faq-answer">
+          While you can still open the vault, go to <strong>Settings → Recovery
+          Code → Replace</strong>. That issues a new code and retires the old one.
+          <br><br>
+          Do this before you get locked out: a recovery code can only be replaced
+          from inside a vault you can still open.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>What if I lose one of my fragments?</summary>
+        <div class="faq-answer">
+          As long as you still have at least the threshold number you chose when
+          adding the file, it rebuilds normally — that's the point of the
+          threshold. Below it, the file cannot be reconstructed. That limit is the
+          security guarantee working as intended, not a fault.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>What does "Rotate Fragments" actually do?</summary>
+        <div class="faq-answer">
+          It re-splits the file with a brand-new key, so fragments you handed out
+          earlier stop working against your vault — useful when you no longer
+          trust where an old fragment ended up.
+          <br><br>
+          It does not reach out and erase copies someone already holds. It makes
+          them useless going forward, which is the most any system can do.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>What happens if my hard drive fails?</summary>
+        <div class="faq-answer">
+          Your vault exists only on this device, so back it up:
+          <strong>Settings → Backup &amp; Restore → Back Up Vault</strong>. That
+          produces a single password-protected file you can keep on a USB drive or
+          in a cloud folder.
+          <br><br>
+          The backup password is separate from your PIN, and it cannot be
+          recovered if forgotten.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Which encryption option should I pick?</summary>
+        <div class="faq-answer">
+          The one shown by default. It's chosen automatically based on your
+          hardware and the file's size, and you can use it without thinking about
+          it. All four options — AES-256-GCM, ChaCha20-Poly1305,
+          XChaCha20-Poly1305 and AES-256-GCM-SIV — are strong authenticated
+          ciphers; the differences are about speed and safety margins, not about
+          one being weak.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Can anyone recover my files for me?</summary>
+        <div class="faq-answer">
+          No. There is no account, no server and no master key. Nobody — including
+          the developer — can open your vault or reset your PIN.
+          <br><br>
+          That's deliberate, and it's exactly why your recovery code and your
+          vault backup matter so much.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Has the security been independently audited?</summary>
+        <div class="faq-answer">
+          Not yet. SecureVault uses standard, widely reviewed cryptography —
+          AES-256-GCM, ChaCha20-Poly1305, Argon2id and Shamir Secret Sharing —
+          rather than anything custom-built, and the fragment logic is covered by
+          an automated test suite. But it has not had a third-party security
+          audit, and it's fair to weigh that when deciding what to trust it with.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Where is my vault stored on disk?</summary>
+        <div class="faq-answer">
+          In the app's own data folder — <span class="mono-inline">Application
+          Support/com.securevault.app</span> on macOS, the equivalent
+          <span class="mono-inline">AppData</span> location on Windows.
+          Everything in it is encrypted and isn't meant to be edited by hand.
+        </div>
+      </details>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-title">Get in Touch</div>
+      <div class="toggle-hint" style="margin-bottom: 14px;">
+        These open in your normal mail client or browser — SecureVault itself
+        never connects to the internet.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="supportEmailBtn">Email Support</button>
+        <button class="btn btn-secondary" id="supportDocsBtn">Documentation</button>
+        <button class="btn btn-secondary" id="supportIssuesBtn">Report an Issue</button>
+      </div>
+      <div class="toggle-hint" id="supportVersionLine" style="margin-top: 14px;"></div>
+    </div>
+  </div>
+
   </div>
 </div>
 
 <!-- ════════════════════════ PASSWORD MODAL ════════════════════════ -->
 <div id="passwordModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-title" id="modalTitle">Password Required</div>
     <div class="modal-sub" id="modalSub">This file is password protected.</div>
     <div>
       <label>Password</label>
       <input type="password" id="modalPasswordInput" placeholder="Enter the file password">
     </div>
-    <div class="modal-error hidden" id="modalError">Incorrect password</div>
+    <div class="modal-error hidden" role="alert" id="modalError">Incorrect password</div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="modalCancel">Cancel</button>
       <button class="btn btn-primary" id="modalConfirm">Confirm</button>
@@ -451,7 +599,7 @@
 
 <!-- ════════════════════════ SHARE ZIP NAME MODAL ════════════════════════ -->
 <div id="zipNameModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-title">Name the Share File</div>
     <div class="modal-sub" id="zipNameModalSub">Choose a name for the exported zip.</div>
     <div>
@@ -467,7 +615,7 @@
 
 <!-- ════════════════════════ FRAGMENT LABELS MODAL ════════════════════════ -->
 <div id="labelsModal" class="modal-overlay hidden">
-  <div class="modal modal-wide">
+  <div class="modal modal-wide" role="dialog" aria-modal="true">
     <div class="modal-title">Fragment Destinations</div>
     <div class="modal-sub" id="labelsModalSub">Note where each fragment went — for your own reference only.</div>
     <div class="labels-list" id="labelsList"></div>
@@ -480,7 +628,7 @@
 
 <!-- ════════════════════════ FRAGMENT PREVIEW MODAL ════════════════════════ -->
 <div id="fragmentPreviewModal" class="modal-overlay hidden">
-  <div class="modal modal-wide">
+  <div class="modal modal-wide" role="dialog" aria-modal="true">
     <div class="modal-title" id="fragmentPreviewTitle">Fragment Preview</div>
     <div class="modal-sub" id="fragmentPreviewSub"></div>
     <div class="fragments-grid" id="fragmentPreviewGrid"></div>
@@ -490,9 +638,73 @@
   </div>
 </div>
 
+<!-- ════════════════════════ RECOVERY CODE MODAL ════════════════════════ -->
+<!-- Shown exactly once, right after a code is issued. There is deliberately
+     no way to view it again — only to replace it, which needs the PIN. -->
+<div id="recoveryCodeModal" class="modal-overlay hidden" data-no-escape>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-title">Save Your Recovery Code</div>
+    <div class="modal-sub">
+      This is the only way back into your vault if you forget your PIN. It is
+      shown once and cannot be retrieved later. Write it down and keep it
+      somewhere safe — not on this device.
+    </div>
+    <div class="recovery-code-display" id="recoveryCodeDisplay"></div>
+    <div class="modal-error hidden" role="alert" id="recoveryCodeError">
+      Please confirm you have written the code down.
+    </div>
+    <div class="toggle-row" style="margin-top: 16px;">
+      <label class="toggle-label" for="recoveryCodeAck">
+        I have written this code down and stored it safely
+      </label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="recoveryCodeAck">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="recoveryCodeCopy">Copy</button>
+      <button class="btn btn-primary" id="recoveryCodeDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ RECOVER WITH CODE MODAL ════════════════════════ -->
+<div id="recoverModal" class="modal-overlay hidden">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-title">Unlock With Recovery Code</div>
+    <div class="modal-sub">
+      Enter the recovery code you saved when you set up your PIN, then choose a
+      new PIN. The old code stops working once this succeeds.
+    </div>
+    <div>
+      <label>Recovery Code</label>
+      <input type="text" id="recoverCodeInput" class="recovery-code-input"
+             placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>New PIN</label>
+        <input type="password" id="recoverNewPinInput" placeholder="At least 4 characters">
+      </div>
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>Confirm New PIN</label>
+        <input type="password" id="recoverConfirmPinInput" placeholder="Re-enter the new PIN">
+      </div>
+    </div>
+    <div class="modal-error hidden" role="alert" id="recoverError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="recoverCancel">Cancel</button>
+      <button class="btn btn-primary" id="recoverConfirm">Unlock</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════ SET PIN MODAL ════════════════════════ -->
 <div id="pinSetupModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-title">Set a PIN</div>
     <div class="modal-sub">Required each time you open SecureVault.</div>
     <div>
@@ -505,7 +717,7 @@
         <input type="password" id="pinSetupConfirmInput" placeholder="Re-enter the PIN">
       </div>
     </div>
-    <div class="modal-error hidden" id="pinSetupError"></div>
+    <div class="modal-error hidden" role="alert" id="pinSetupError"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="pinSetupCancel">Cancel</button>
       <button class="btn btn-primary" id="pinSetupConfirm">Enable</button>
@@ -515,7 +727,7 @@
 
 <!-- ════════════════════════ BACKUP PASSWORD MODAL ════════════════════════ -->
 <div id="backupPasswordModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-title">Protect This Backup</div>
     <div class="modal-sub">
       Choose a password for this backup file — separate from your PIN. Anyone with
@@ -532,7 +744,7 @@
         <input type="password" id="backupPasswordConfirmInput" placeholder="Re-enter the password">
       </div>
     </div>
-    <div class="modal-error hidden" id="backupPasswordError"></div>
+    <div class="modal-error hidden" role="alert" id="backupPasswordError"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="backupPasswordCancel">Cancel</button>
       <button class="btn btn-primary" id="backupPasswordConfirm">Continue</button>
@@ -541,7 +753,7 @@
 </div>
 
 <!-- toast notifications -->
-<div class="toast-stack" id="toastStack"></div>
+<div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
 
 <script type="module" src="main.js"></script>
 </body>

@@ -4,8 +4,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { revealItemInDir, openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getVersion } from "@tauri-apps/api/app";
 
 // --- helpers ---
 
@@ -120,6 +121,46 @@ document.querySelectorAll(".tab").forEach((btn) => {
 });
 document.querySelectorAll("[data-goto]").forEach((btn) => {
   btn.addEventListener("click", () => switchTab(btn.dataset.goto));
+});
+
+// --- modal keyboard handling ---
+
+// Every modal shares the same shape — a .modal-actions row holding a
+// secondary "cancel" and usually a primary "confirm" — so one listener
+// covers all of them instead of each wiring its own keys. Escape cancels,
+// Enter submits from any field.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" && e.key !== "Enter") return;
+
+  // Several can be stacked (the regenerate flow opens the recovery-code
+  // modal on top of the password modal); the last in DOM order paints on
+  // top, so that's the one the keypress belongs to.
+  const open = [...document.querySelectorAll(".modal-overlay:not(.hidden)")].pop();
+  if (!open) return;
+
+  const primary = open.querySelector(".modal-actions .btn-primary");
+  const secondary = open.querySelector(".modal-actions .btn-secondary");
+
+  if (e.key === "Escape") {
+    // Opted out by [data-no-escape]: the recovery code is displayed exactly
+    // once, so dismissing it with a stray keypress would lose it for good.
+    if (open.hasAttribute("data-no-escape")) return;
+    if (secondary && !secondary.disabled) {
+      e.preventDefault();
+      secondary.click();
+    }
+    return;
+  }
+
+  // Enter only submits from a field. Otherwise it would double-fire on
+  // whichever button already has focus.
+  const el = document.activeElement;
+  if (!el || el.tagName !== "INPUT" || !open.contains(el)) return;
+  const target = primary ?? secondary;
+  if (target && !target.disabled) {
+    e.preventDefault();
+    target.click();
+  }
 });
 
 // --- password modal ---
@@ -691,7 +732,9 @@ function renderVaultList() {
       </div>
       <div class="vault-item-actions">
         <div class="item-menu">
-          <button class="icon-btn item-menu-trigger" title="More actions" data-action="menu">⋯</button>
+          <button class="icon-btn item-menu-trigger" title="More actions"
+                  aria-label="More actions" aria-haspopup="true"
+                  data-action="menu">⋯</button>
           <div class="item-menu-dropdown hidden">
             <button class="item-menu-option" data-action="pin">${pinBtnText}</button>
             <button class="item-menu-option" data-action="download">Download</button>
@@ -1064,8 +1107,13 @@ async function pickFragments() {
   const selected = await open({
     multiple: true,
     directory: false,
-    title: "Select fragment files (.svf / .svf3)",
-      filters: [{ name: "SecureVault Fragments", extensions: ["svf", "svf3"] }, { name: "All Files", extensions: ["*"] }],
+    title: "Select fragment files or a share bundle",
+    // Fragments and the app's own share bundles only — an "All Files"
+    // fallback here just buried the actual fragments among every unrelated
+    // document in the folder.
+    filters: [
+      { name: "SecureVault Fragments", extensions: ["svf", "svf3", "zip"] },
+    ],
 
   });
   if (!selected) return;
@@ -1324,7 +1372,7 @@ async function setupDragDrop() {
           }
         }
         document.getElementById("importDropContent").style.opacity = "0.4";
-        await loadFragmentInfo();
+        await inspectLoadedFragments();
       }
     });
   } catch {
@@ -1423,6 +1471,21 @@ async function refreshSecurityStatus() {
       pinToggle.checked = status.pinEnabled;
     }
 
+    const recoveryHint = document.getElementById("recoveryCodeHint");
+    const recoveryBtn = document.getElementById("btnRegenerateRecovery");
+    const lockOn = status.pinEnabled || status.biometricEnabled;
+    if (status.recoveryCodeSet) {
+      recoveryHint.textContent = status.biometricEnabled
+        ? `A recovery code is set — the only way in if ${status.biometryLabel} stops working.`
+        : "A recovery code is set — the only way in if you forget your PIN.";
+      recoveryBtn.disabled = false;
+    } else {
+      recoveryHint.textContent = lockOn
+        ? "No recovery code — losing access to this vault would be permanent."
+        : "Turn on a PIN or Touch ID to get a recovery code.";
+      recoveryBtn.disabled = !lockOn;
+    }
+
     const lockActive = status.biometricEnabled || status.pinEnabled;
     autoLockSelect.disabled = !lockActive;
     autoLockSelect.value = String(status.autoLockMinutes ?? 0);
@@ -1458,8 +1521,11 @@ document.getElementById("biometricToggle").addEventListener("change", async (e) 
   toggle.disabled = true;
   try {
     if (wantEnabled) {
-      await invoke("enable_biometric_lock");
+      const recoveryCode = await invoke("enable_biometric_lock");
       toast("Touch ID / Windows Hello lock enabled", "ok");
+      // Matters even more here than for a PIN: a lost keychain entry leaves
+      // nothing to remember, so this code is the only way back.
+      await showRecoveryCode(recoveryCode);
     } else {
       await invoke("disable_biometric_lock");
       toast("Touch ID / Windows Hello lock disabled", "ok");
@@ -1533,8 +1599,10 @@ document.getElementById("pinToggle").addEventListener("change", async (e) => {
         toggle.checked = false;
         return;
       }
-      await invoke("enable_pin_lock", { pin });
+      const recoveryCode = await invoke("enable_pin_lock", { pin });
       toast("PIN lock enabled", "ok");
+      // Shown once, immediately — the backend keeps no copy to show later.
+      await showRecoveryCode(recoveryCode);
     } else {
       const confirmed = await askPassword(
         "Confirm PIN",
@@ -1551,6 +1619,161 @@ document.getElementById("pinToggle").addEventListener("change", async (e) => {
     toggle.checked = !wantEnabled;
     toast("Could not update PIN lock: " + err, "err");
   } finally {
+    await refreshSecurityStatus();
+  }
+});
+
+// --- recovery code ---
+
+// Displays a freshly issued code. Resolves only once the user has ticked the
+// acknowledgement — this is the single moment the code is ever visible, so
+// it deliberately can't be dismissed by accident.
+function showRecoveryCode(code) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("recoveryCodeModal");
+    const display = document.getElementById("recoveryCodeDisplay");
+    const ack = document.getElementById("recoveryCodeAck");
+    const errorEl = document.getElementById("recoveryCodeError");
+    const copyBtn = document.getElementById("recoveryCodeCopy");
+    const doneBtn = document.getElementById("recoveryCodeDone");
+
+    // One element per dash-separated group, so wrapping can't split a group.
+    display.replaceChildren(
+      ...code.split("-").map((group) => {
+        const span = document.createElement("span");
+        span.className = "recovery-code-group";
+        span.textContent = group;
+        return span;
+      })
+    );
+    ack.checked = false;
+    errorEl.classList.add("hidden");
+    copyBtn.textContent = "Copy";
+    overlay.classList.remove("hidden");
+
+    const cleanup = () => {
+      overlay.classList.add("hidden");
+      errorEl.classList.add("hidden");
+      // Don't leave the code sitting in the DOM after the modal closes.
+      display.replaceChildren();
+      copyBtn.onclick = null;
+      doneBtn.onclick = null;
+      ack.onchange = null;
+    };
+
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+        copyBtn.textContent = "Copied";
+      } catch {
+        copyBtn.textContent = "Copy failed";
+      }
+    };
+
+    ack.onchange = () => {
+      if (ack.checked) errorEl.classList.add("hidden");
+    };
+
+    doneBtn.onclick = () => {
+      if (!ack.checked) {
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      cleanup();
+      resolve();
+    };
+  });
+}
+
+// Collects a recovery code plus a replacement PIN. `submit(code, newPin)`
+// does the actual work and throws on failure, so the error shows inline and
+// the user can retry without losing what they typed.
+function askRecovery(submit) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("recoverModal");
+    const codeInput = document.getElementById("recoverCodeInput");
+    const pinInput = document.getElementById("recoverNewPinInput");
+    const confirmInput = document.getElementById("recoverConfirmPinInput");
+    const errorEl = document.getElementById("recoverError");
+    const cancelBtn = document.getElementById("recoverCancel");
+    const confirmBtn = document.getElementById("recoverConfirm");
+
+    codeInput.value = "";
+    pinInput.value = "";
+    confirmInput.value = "";
+    errorEl.classList.add("hidden");
+    overlay.classList.remove("hidden");
+    codeInput.focus();
+
+    const cleanup = () => {
+      overlay.classList.add("hidden");
+      errorEl.classList.add("hidden");
+      codeInput.value = "";
+      pinInput.value = "";
+      confirmInput.value = "";
+      cancelBtn.onclick = null;
+      confirmBtn.onclick = null;
+    };
+
+    const fail = (msg) => {
+      errorEl.textContent = msg;
+      errorEl.classList.remove("hidden");
+    };
+
+    cancelBtn.onclick = () => { cleanup(); resolve(null); };
+
+    confirmBtn.onclick = async () => {
+      const code = codeInput.value.trim();
+      if (!code) return fail("Enter your recovery code");
+      if (pinInput.value.length < MIN_PIN_LENGTH)
+        return fail(`PIN must be at least ${MIN_PIN_LENGTH} characters`);
+      if (pinInput.value !== confirmInput.value) return fail("PINs don't match");
+
+      errorEl.classList.add("hidden");
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Unlocking…";
+      try {
+        const nextCode = await submit(code, pinInput.value);
+        cleanup();
+        resolve(nextCode);
+      } catch (err) {
+        fail(String(err));
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Unlock";
+      }
+    };
+  });
+}
+
+document.getElementById("btnRegenerateRecovery").addEventListener("click", async () => {
+  const btn = document.getElementById("btnRegenerateRecovery");
+  btn.disabled = true;
+  try {
+    const status = await invoke("security_status");
+
+    if (status.biometricEnabled) {
+      // No PIN to confirm against — the native biometric prompt raised by
+      // the command is itself the proof of ownership.
+      const next = await invoke("regenerate_recovery_code_biometric");
+      await showRecoveryCode(next);
+      toast("New recovery code issued", "ok");
+    } else {
+      const confirmed = await askPassword(
+        "Confirm PIN",
+        "Enter your PIN to issue a new recovery code. The previous code stops working.",
+        async (pw) => {
+          const next = await invoke("regenerate_recovery_code", { pin: pw });
+          await showRecoveryCode(next);
+          return true;
+        }
+      );
+      if (confirmed !== null) toast("New recovery code issued", "ok");
+    }
+  } catch (err) {
+    toast("Could not replace the recovery code: " + err, "err");
+  } finally {
+    btn.disabled = false;
     await refreshSecurityStatus();
   }
 });
@@ -1678,11 +1901,13 @@ function showLockScreen(status, onUnlocked) {
   const pinInput = document.getElementById("lockScreenPinInput");
   const bioBtn = document.getElementById("btnUnlockBiometric");
   const pinBtn = document.getElementById("btnUnlockPin");
+  const forgotBtn = document.getElementById("btnForgotPin");
 
   errorEl.classList.add("hidden");
   lockScreen.classList.remove("fade-out", "removed", "hidden");
   pinRow.classList.add("hidden");
   bioBtn.classList.add("hidden");
+  forgotBtn.classList.add("hidden");
   pinInput.value = "";
   pinInput.disabled = false;
   bioBtn.disabled = false;
@@ -1693,6 +1918,27 @@ function showLockScreen(status, onUnlocked) {
     setTimeout(() => lockScreen.classList.add("removed"), 550);
     resetIdleTimer();
     await onUnlocked();
+  };
+
+  // Offered for both lock methods, but only when a code actually exists —
+  // otherwise the link would lead to a dead end. Recovery always ends in
+  // PIN mode, so the wording differs from the biometric side.
+  const offerRecovery = (label) => {
+    if (!status.recoveryCodeSet) return;
+    forgotBtn.textContent = label;
+    forgotBtn.classList.remove("hidden");
+    forgotBtn.onclick = async () => {
+      errorEl.classList.add("hidden");
+      const nextCode = await askRecovery((code, newPin) =>
+        invoke("recover_with_code", { recoveryCode: code, newPin })
+      );
+      if (nextCode === null) return;
+      // The vault is already unlocked at this point; show the replacement
+      // code before dropping the lock screen.
+      await showRecoveryCode(nextCode);
+      toast("Vault unlocked — a new PIN has been set", "ok");
+      await dismiss();
+    };
   };
 
   if (status.pinEnabled) {
@@ -1716,6 +1962,8 @@ function showLockScreen(status, onUnlocked) {
     };
     pinBtn.onclick = tryUnlock;
     pinInput.onkeydown = (e) => { if (e.key === "Enter") tryUnlock(); };
+
+    offerRecovery("Forgot your PIN?");
   } else {
     bioBtn.classList.remove("hidden");
     bioBtn.onclick = async () => {
@@ -1731,6 +1979,8 @@ function showLockScreen(status, onUnlocked) {
         bioBtn.disabled = false;
       }
     };
+
+    offerRecovery(`Can't use ${status.biometryLabel}?`);
   }
 }
 
@@ -1772,10 +2022,56 @@ setInterval(async () => {
   }
 }, 5000);
 
+// --- help / support ---
+
+const SUPPORT_EMAIL = "tunoohlaing456@gmail.com";
+// The marketing site in website/ isn't hosted yet, so this points at the
+// repo, whose README already documents the project and is live today.
+// Swap it for the site's own URL once that's published.
+const SUPPORT_DOCS_URL = "https://github.com/SayPing02/SecureVault#readme";
+const SUPPORT_ISSUES_URL = "https://github.com/SayPing02/SecureVault/issues";
+
+// Every one of these hands off to the OS default handler (mail client or
+// browser). The app itself still makes no network requests of its own.
+async function openExternal(url) {
+  try {
+    await openUrl(url);
+  } catch (err) {
+    toast("Could not open that link: " + err, "err");
+  }
+}
+
+// Shown in the Help panel and pre-filled into the support email, so a report
+// arrives already saying which build it came from.
+let appVersion = "";
+async function loadAppVersion() {
+  try {
+    appVersion = await getVersion();
+    document.getElementById("supportVersionLine").textContent =
+      `SecureVault ${appVersion}`;
+  } catch {
+    // Non-critical — the support buttons still work without it.
+  }
+}
+
+document.getElementById("supportEmailBtn").addEventListener("click", () => {
+  const subject = encodeURIComponent(
+    `SecureVault support${appVersion ? ` (v${appVersion})` : ""}`
+  );
+  openExternal(`mailto:${SUPPORT_EMAIL}?subject=${subject}`);
+});
+document.getElementById("supportDocsBtn").addEventListener("click", () =>
+  openExternal(SUPPORT_DOCS_URL)
+);
+document.getElementById("supportIssuesBtn").addEventListener("click", () =>
+  openExternal(SUPPORT_ISSUES_URL)
+);
+
 // --- init ---
 
 updateThresholdVisual();
 setupDragDrop();
+loadAppVersion();
 
 // Show the intro screen for at least `minDelay` ms, but also wait for the
 // vault list to actually finish loading — whichever takes longer — so it

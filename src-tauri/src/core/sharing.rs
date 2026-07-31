@@ -8,7 +8,8 @@ use crate::core::error::{CoreError, CoreResult};
 use crate::core::model::Fragment;
 use crate::core::op_control::OpControl;
 use std::collections::HashMap;
-use std::io::{Cursor, Write};
+use std::io::{Cursor, Read, Write};
+use std::path::{Path, PathBuf};
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
@@ -43,7 +44,56 @@ pub fn package_all_fragments(fragments: &[Fragment], ctl: &OpControl) -> CoreRes
 // Parse a .svf file from its opaque bytes into a Fragment
 pub fn read_opaque_fragment(data: &[u8]) -> CoreResult<Fragment> {
     Fragment::from_opaque_bytes(data)
-        .map_err(|e| CoreError::InvalidFragment(e))
+        .map_err(CoreError::InvalidFragment)
+}
+
+/// Pull the fragment entries (.svf / .svf3) out of a share zip into `dest`,
+/// which must already exist. Lets the app read back the very bundles it
+/// produces, instead of making the user unzip them by hand first.
+///
+/// Entry names are reduced to their final path component before being used,
+/// so an archive containing `../../something` can't write outside `dest`
+/// ("zip slip"). Anything that isn't a fragment — the labels.txt note,
+/// directory records — is skipped rather than treated as an error.
+/// Returns the written paths sorted, so ordering doesn't depend on however
+/// the archive happened to be built.
+pub fn extract_fragments_from_zip(zip_bytes: &[u8], dest: &Path) -> CoreResult<Vec<PathBuf>> {
+    let mut archive = zip::ZipArchive::new(Cursor::new(zip_bytes))
+        .map_err(|e| CoreError::Archive(format!("not a readable zip: {e}")))?;
+
+    let mut written = Vec::new();
+    for i in 0..archive.len() {
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| CoreError::Archive(e.to_string()))?;
+        if entry.is_dir() {
+            continue;
+        }
+
+        // Deliberately discard any directory part the archive claims.
+        let name = match Path::new(entry.name()).file_name().and_then(|n| n.to_str()) {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+        let lower = name.to_ascii_lowercase();
+        if !(lower.ends_with(".svf") || lower.ends_with(".svf3")) {
+            continue;
+        }
+
+        let mut buf = Vec::new();
+        entry.read_to_end(&mut buf)?;
+        let out_path = dest.join(&name);
+        std::fs::write(&out_path, &buf)?;
+        written.push(out_path);
+    }
+
+    if written.is_empty() {
+        return Err(CoreError::Archive(
+            "that zip doesn't contain any .svf or .svf3 fragment files".into(),
+        ));
+    }
+    written.sort();
+    Ok(written)
 }
 
 // Re-open an already-built share zip and add a "labels.txt" listing which
@@ -112,6 +162,96 @@ mod tests {
         std::io::Read::read_to_end(&mut entry, &mut contents).unwrap();
         let recovered = read_opaque_fragment(&contents).unwrap();
         assert_eq!(recovered.original_filename, "share.txt");
+    }
+
+    fn temp_dir(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join(format!("svtest_unzip_{tag}_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn extracts_fragments_from_a_share_zip_the_app_produced() {
+        let params = SplitParams {
+            total_fragments: 5,
+            threshold:       3,
+            password:        None,
+            compress:        false,
+            cipher:          "aes256gcm".to_string(),
+            kdf:             "standard".to_string(),
+            padding_pct:     0,
+        };
+        let data = b"round trip through a share zip".to_vec();
+        let frags = fragmenter::split_file(&data, "share.txt", &params).unwrap();
+        // A real share zip also carries a labels.txt note, which must be
+        // skipped rather than mistaken for a fragment.
+        let zip = append_labels_file(
+            package_all_fragments(&frags, &OpControl::new()).unwrap(),
+            &HashMap::from([(1u8, "USB drive".to_string())]),
+        )
+        .unwrap();
+
+        let dest = temp_dir("roundtrip");
+        let extracted = extract_fragments_from_zip(&zip, &dest).unwrap();
+
+        assert_eq!(extracted.len(), 5, "labels.txt must not be counted");
+        assert!(extracted.iter().all(|p| p.exists()));
+
+        // The extracted files really do reconstruct the original.
+        let recovered: Vec<_> = extracted[0..3]
+            .iter()
+            .map(|p| read_opaque_fragment(&std::fs::read(p).unwrap()).unwrap())
+            .collect();
+        assert_eq!(fragmenter::reconstruct_file(&recovered, None).unwrap(), data);
+
+        let _ = std::fs::remove_dir_all(&dest);
+    }
+
+    #[test]
+    fn traversal_entry_names_cannot_escape_the_destination() {
+        // "Zip slip": an archive whose entry name climbs out of the target
+        // directory. The extractor must keep only the final component.
+        let mut buffer = Cursor::new(Vec::new());
+        {
+            let mut zip = ZipWriter::new(&mut buffer);
+            let opts = SimpleFileOptions::default();
+            zip.start_file("../../escaped.svf", opts).unwrap();
+            zip.write_all(b"payload").unwrap();
+            zip.finish().unwrap();
+        }
+        let bytes = buffer.into_inner();
+
+        let dest = temp_dir("slip");
+        let extracted = extract_fragments_from_zip(&bytes, &dest).unwrap();
+
+        assert_eq!(extracted.len(), 1);
+        assert_eq!(extracted[0], dest.join("escaped.svf"));
+        assert!(extracted[0].starts_with(&dest), "must stay inside dest");
+        assert!(
+            !dest.parent().unwrap().join("escaped.svf").exists(),
+            "nothing may be written outside dest"
+        );
+
+        let _ = std::fs::remove_dir_all(&dest);
+    }
+
+    #[test]
+    fn a_zip_with_no_fragments_is_rejected() {
+        let mut buffer = Cursor::new(Vec::new());
+        {
+            let mut zip = ZipWriter::new(&mut buffer);
+            zip.start_file("readme.txt", SimpleFileOptions::default()).unwrap();
+            zip.write_all(b"not a fragment").unwrap();
+            zip.finish().unwrap();
+        }
+        let bytes = buffer.into_inner();
+
+        let dest = temp_dir("empty");
+        let err = extract_fragments_from_zip(&bytes, &dest).unwrap_err();
+        assert!(err.to_string().contains("fragment"), "unexpected error: {err}");
+
+        let _ = std::fs::remove_dir_all(&dest);
     }
 
     #[test]

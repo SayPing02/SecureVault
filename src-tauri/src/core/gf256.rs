@@ -25,6 +25,11 @@ fn tables() -> &'static Tables {
         // non-zero elements. (2 does NOT work as a generator here,
         // it only hits 51 elements which completely breaks everything)
         let mut x: u16 = 1;
+        // needless_range_loop doesn't apply: `i` isn't only an index into
+        // `exp`, it's also the *value* stored into `log`, so the two tables
+        // are built as inverses of each other in one pass. Iterating over
+        // `exp` would lose access to `i` for the second assignment.
+        #[allow(clippy::needless_range_loop)]
         for i in 0..255 {
             exp[i] = x as u8;
             log[x as usize] = i as u8;

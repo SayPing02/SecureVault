@@ -84,6 +84,12 @@ fn default_kdf_str()    -> String { "standard".to_string() }
 /// Stream-split a large file into N shard files under `frag_dir/<file_id>/`.
 /// `at_rest_key` is used to encrypt each shard file's metadata header.
 /// Returns one `LargeFragmentMeta` per shard (useful for building the vault manifest).
+///
+/// Eight parameters is one over clippy's default. Bundling them into a struct
+/// would mean a params type used at exactly two call sites and threaded
+/// through the tests, which reads worse than the explicit list — the
+/// arguments here are all genuinely independent inputs, not a cohesive group.
+#[allow(clippy::too_many_arguments)]
 pub fn split_large_file<F: FnMut(u8, &str)>(
     file_path: &Path,
     filename:  &str,
@@ -128,7 +134,7 @@ pub fn split_large_file<F: FnMut(u8, &str)>(
 
     // chunk_count is known upfront from file size; add one extra chunk if padding is requested
     let file_size        = std::fs::metadata(file_path)?.len();
-    let real_chunk_count = ((file_size as usize + CHUNK_SIZE - 1) / CHUNK_SIZE) as u64;
+    let real_chunk_count = (file_size as usize).div_ceil(CHUNK_SIZE) as u64;
     let chunk_count      = real_chunk_count + if params.padding_pct > 0 { 1 } else { 0 };
 
     std::fs::create_dir_all(frag_dir)?;
@@ -137,7 +143,7 @@ pub fn split_large_file<F: FnMut(u8, &str)>(
     let mut writers: Vec<BufWriter<std::fs::File>> = (0..n)
         .map(|i| {
             std::fs::File::create(shard_path(frag_dir, i as u8))
-                .map(|f| BufWriter::new(f))
+                .map(BufWriter::new)
                 .map_err(CoreError::Io)
         })
         .collect::<CoreResult<_>>()?;
@@ -205,7 +211,7 @@ pub fn split_large_file<F: FnMut(u8, &str)>(
 
         // RS encode: pad ciphertext to a multiple of K, then split into K data
         // shards + (N-K) parity shards.
-        let shard_size = (actual_enc_len + k - 1) / k;
+        let shard_size = actual_enc_len.div_ceil(k);
         let mut padded = enc.ciphertext;
         padded.resize(shard_size * k, 0);
 
@@ -250,7 +256,7 @@ pub fn split_large_file<F: FnMut(u8, &str)>(
         };
         let enc = crypto::encrypt_file(&params.cipher, &file_key, to_enc)?;
         let actual_enc_len = enc.ciphertext.len();
-        let shard_size = (actual_enc_len + k - 1) / k;
+        let shard_size = actual_enc_len.div_ceil(k);
         let mut padded_rs = enc.ciphertext;
         padded_rs.resize(shard_size * k, 0);
         let mut shards: Vec<Vec<u8>> = (0..n)
@@ -392,7 +398,7 @@ pub fn reconstruct_large_file_with_progress<F: FnMut(u8, &str)>(
         readers[0].1.read_exact(&mut nonce)?;
         readers[0].1.read_exact(&mut enc_len_buf)?;
         let actual_enc_len = u32::from_le_bytes(enc_len_buf) as usize;
-        let shard_size = (actual_enc_len + k - 1) / k;
+        let shard_size = actual_enc_len.div_ceil(k);
 
         let mut first_shard = vec![0u8; shard_size];
         readers[0].1.read_exact(&mut first_shard)?;
@@ -419,8 +425,8 @@ pub fn reconstruct_large_file_with_progress<F: FnMut(u8, &str)>(
 
         // Re-assemble the encrypted chunk from the K data shards
         let mut enc_chunk = Vec::with_capacity(shard_size * k);
-        for i in 0..k {
-            enc_chunk.extend_from_slice(option_shards[i].as_ref().unwrap());
+        for shard in option_shards.iter().take(k) {
+            enc_chunk.extend_from_slice(shard.as_ref().unwrap());
         }
         enc_chunk.truncate(actual_enc_len); // strip RS padding
 
@@ -482,8 +488,8 @@ pub fn read_meta(path: &Path, at_rest_key: &[u8; crypto::KEY_LEN]) -> CoreResult
         let json_len = u32::from_le_bytes(len_buf) as usize;
         let mut json_bytes = vec![0u8; json_len];
         f.read_exact(&mut json_bytes)?;
-        return Ok(serde_json::from_slice(&json_bytes)
-            .map_err(|e| CoreError::InvalidFragment(format!("bad portable header: {e}")))?);
+        return serde_json::from_slice(&json_bytes)
+            .map_err(|e| CoreError::InvalidFragment(format!("bad portable header: {e}")));
     }
 
     if &magic != MAGIC {
@@ -581,16 +587,9 @@ pub fn meta_from_portable_bytes(data: &[u8]) -> CoreResult<LargeFragmentMeta> {
         .map_err(|e| CoreError::InvalidFragment(format!("bad portable header: {e}")))
 }
 
-/// Package all vault shards as portable .svf3 files in a zip.
+/// Package all vault shards as portable .svf3 files in a zip, reporting
+/// on_progress(percent 0-100, message) per shard.
 /// Returns (zip_bytes, original_filename, shard_count).
-pub fn package_shards_for_sharing(
-    frag_dir: &Path,
-    at_rest_key: &[u8; crypto::KEY_LEN],
-) -> CoreResult<(Vec<u8>, String, usize)> {
-    package_shards_for_sharing_with_progress(frag_dir, at_rest_key, &OpControl::new(), |_, _| {})
-}
-
-// Same as package_shards_for_sharing but calls on_progress(percent 0-100, message) per shard.
 pub fn package_shards_for_sharing_with_progress<F: FnMut(u8, &str)>(
     frag_dir: &Path,
     at_rest_key: &[u8; crypto::KEY_LEN],

@@ -24,3 +24,4 @@ Thumbs.db
 .claude/scheduled_tasks.lock
 
 # NOTE: Cargo.lock IS committed (see README) so builds are reproducible.
+.github/workflows/ci.yml

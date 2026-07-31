@@ -26,6 +26,58 @@ fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
+/// Fragment paths with any share-zip entries expanded into loose files on
+/// disk. Extracted copies live in a temp directory that is deleted when this
+/// value drops, so every exit path — including the `?` early returns during
+/// expansion itself — cleans up after itself.
+struct ExpandedFragments {
+    paths: Vec<String>,
+    temp_dir: Option<std::path::PathBuf>,
+}
+
+impl Drop for ExpandedFragments {
+    fn drop(&mut self) {
+        if let Some(dir) = &self.temp_dir {
+            let _ = fs::remove_dir_all(dir);
+        }
+    }
+}
+
+fn is_zip(path: &str) -> bool {
+    path.to_ascii_lowercase().ends_with(".zip")
+}
+
+/// Accept the app's own `-share.zip` bundles anywhere loose fragment files
+/// are accepted. Without this, reconstructing from a bundle SecureVault
+/// itself produced means unzipping it by hand first.
+fn expand_fragment_paths(paths: &[String]) -> Result<ExpandedFragments, String> {
+    if !paths.iter().any(|p| is_zip(p)) {
+        return Ok(ExpandedFragments { paths: paths.to_vec(), temp_dir: None });
+    }
+
+    let dir = std::env::temp_dir().join(format!("securevault_unzip_{}", Uuid::new_v4()));
+    fs::create_dir_all(&dir)
+        .map_err(|e| format!("could not create a temporary folder: {e}"))?;
+
+    // Owns `dir` from here on, so the `?`s below still trigger cleanup.
+    let mut expanded = ExpandedFragments { paths: Vec::new(), temp_dir: Some(dir.clone()) };
+
+    for path in paths {
+        if is_zip(path) {
+            let bytes = fs::read(path)
+                .map_err(|e| format!("could not read {path}: {e}"))?;
+            let extracted = sharing::extract_fragments_from_zip(&bytes, &dir)?;
+            expanded
+                .paths
+                .extend(extracted.iter().map(|p| p.to_string_lossy().to_string()));
+        } else {
+            expanded.paths.push(path.clone());
+        }
+    }
+
+    Ok(expanded)
+}
+
 // Turn a user-supplied name into a safe zip filename: strip any path
 // components (so it can't be used to write outside Downloads), drop
 // characters that are invalid/awkward in filenames, and make sure it ends
@@ -229,6 +281,11 @@ pub async fn reconstruct_from_fragments(
 
             emit!(2, "Reading fragment files…");
 
+            // Expand any share-zip into loose fragments first; the guard
+            // keeps the extracted files alive for the rest of this closure.
+            let expanded = expand_fragment_paths(&fragment_paths)?;
+            let fragment_paths = &expanded.paths;
+
             // Detect format from first file
             let first_data = fs::read(&fragment_paths[0])
                 .map_err(|e| format!("could not read {}: {e}", fragment_paths[0]))?;
@@ -417,6 +474,9 @@ pub fn verify_fragment_password(
     }
     let pw = Some(password.as_str()).filter(|p| !p.is_empty());
 
+    let expanded = expand_fragment_paths(&fragment_paths)?;
+    let fragment_paths = &expanded.paths;
+
     let first_data = fs::read(&fragment_paths[0])
         .map_err(|e| format!("could not read {}: {e}", fragment_paths[0]))?;
 
@@ -441,7 +501,7 @@ pub fn verify_fragment_password(
     // of the file's ciphertext, so stop as soon as we have `threshold` of
     // them rather than decoding every selected file.
     let mut fragments: Vec<Fragment> = Vec::new();
-    for path_str in &fragment_paths {
+    for path_str in fragment_paths {
         if let Some(first) = fragments.first() {
             let first: &Fragment = first;
             if fragments.len() >= first.threshold as usize { break; }
@@ -464,6 +524,9 @@ pub fn inspect_fragments(
         return Err("no fragment files selected".to_string());
     }
 
+    let expanded = expand_fragment_paths(&fragment_paths)?;
+    let fragment_paths = &expanded.paths;
+
     let first_data = fs::read(&fragment_paths[0])
         .map_err(|e| format!("could not read {}: {e}", fragment_paths[0]))?;
 
@@ -485,7 +548,7 @@ pub fn inspect_fragments(
 
     // Small-file opaque fragments (.svf)
     let mut fragments: Vec<Fragment> = Vec::new();
-    for path_str in &fragment_paths {
+    for path_str in fragment_paths {
         let data = fs::read(path_str)
             .map_err(|e| format!("could not read {}: {e}", path_str))?;
         let frag = sharing::read_opaque_fragment(&data)?;

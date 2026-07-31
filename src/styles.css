@@ -915,6 +915,114 @@
     flex-shrink: 0;
   }
 
+  /* ── Help / FAQ ───────────────────────────────────────────────────────
+     Built on native <details>/<summary>: no JS state to manage, and
+     keyboard access plus screen-reader expand/collapse come for free. */
+  .faq-item {
+    border-top: 1px solid var(--border);
+  }
+  .faq-item:first-of-type { border-top: none; }
+
+  .faq-item summary {
+    padding: 14px 26px 14px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    position: relative;
+    list-style: none;
+    transition: color 0.15s;
+  }
+  /* Hide the platform's default disclosure triangle in favour of our own. */
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::marker { content: ""; }
+
+  .faq-item summary:hover { color: var(--accent); }
+
+  /* Chevron that rotates when the item opens. */
+  .faq-item summary::after {
+    content: "";
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--text3);
+    border-bottom: 2px solid var(--text3);
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform 0.18s;
+  }
+  .faq-item[open] summary::after {
+    transform: translateY(-30%) rotate(225deg);
+  }
+  .faq-item[open] summary { color: var(--accent); }
+
+  .faq-answer {
+    padding: 0 20px 16px 0;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--text2);
+  }
+  .faq-answer strong { color: var(--text); font-weight: 700; }
+
+  .mono-inline {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--text);
+  }
+
+  /* ── Recovery code ────────────────────────────────────────────────────
+     The one-time code display is deliberately large, monospaced and
+     selectable — it exists to be transcribed accurately by hand. */
+  .recovery-code-display {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 10px;
+    margin-top: 16px;
+    padding: 18px 16px;
+    border-radius: 8px;
+    background: var(--surface3);
+    border: 1px solid var(--accent);
+    user-select: all;
+  }
+  /* Each dash-separated group is its own box, so a narrow window wraps
+     between groups instead of splitting one mid-way — a code that breaks
+     across lines at an arbitrary character is easy to transcribe wrong. */
+  .recovery-code-group {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .recovery-code-input {
+    font-family: var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Quiet inline link-style button — used for "Forgot your PIN?" so it sits
+     below the unlock control without competing with it. */
+  .link-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    margin-top: 14px;
+    color: var(--text3);
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .link-btn:hover { color: var(--text); }
+
   /* Reminder badge — fragments haven't been rotated in a while. Advisory
      only, never blocks anything (see ROTATION_STALE_DAYS in main.js). */
   .stale-badge {
