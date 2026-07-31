@@ -87,7 +87,9 @@ fn large_file_password_survives_share_and_import() {
     ).unwrap();
     assert!(metas[0].password_protected);
 
-    let (zip_bytes, _filename, _count) = large_fragment::package_shards_for_sharing(&frag_dir, sender.at_rest_key()).unwrap();
+    let (zip_bytes, _filename, _count) = large_fragment::package_shards_for_sharing_with_progress(
+        &frag_dir, sender.at_rest_key(), &OpControl::new(), |_, _| {},
+    ).unwrap();
 
     let recipient_dir = std::env::temp_dir().join(format!("svtest_recipient_svf3_{}", uuid::Uuid::new_v4()));
     let shard_paths = unzip_to(zip_bytes, &recipient_dir);

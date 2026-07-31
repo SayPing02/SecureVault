@@ -77,8 +77,8 @@ pub fn combine(shares: &[Share]) -> CoreResult<Vec<u8>> {
 
     // interpolate each byte position independently
     let mut secret = vec![0u8; secret_len];
-    for byte_idx in 0..secret_len {
-        secret[byte_idx] = interpolate_at_zero(shares, byte_idx);
+    for (byte_idx, out) in secret.iter_mut().enumerate() {
+        *out = interpolate_at_zero(shares, byte_idx);
     }
 
     Ok(secret)

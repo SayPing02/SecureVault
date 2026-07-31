@@ -12,6 +12,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "--port", "1421"],
       "port": 1421
+    },
+    {
+      "name": "marketing-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4321", "--directory", "website"],
+      "port": 4321
     }
   ]
 }

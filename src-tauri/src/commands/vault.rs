@@ -247,8 +247,8 @@ pub async fn split_and_store(
                 let size_info = if compressed {
                     let ratio = file_bytes.len();
                     let compressed_size = fragments[0].ciphertext_b64.len() * 3 / 4;
-                    let enc_pct = if ratio > 0 { compressed_size * 100 / ratio } else { 100 };
-                    let savings = if enc_pct < 100 { 100 - enc_pct } else { 0 };
+                    let enc_pct = (compressed_size * 100).checked_div(ratio).unwrap_or(100);
+                    let savings = 100_usize.saturating_sub(enc_pct);
                     format!(" (compressed ~{}%)", savings)
                 } else {
                     String::new()
