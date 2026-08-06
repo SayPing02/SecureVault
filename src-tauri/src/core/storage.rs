@@ -169,8 +169,33 @@ impl Storage {
                 .unwrap_or(false);
             if !is_frag { continue; }
 
-            let data = self.read_encrypted(&path)?;
-            let frag: Fragment = serde_json::from_slice(&data)?;
+            // A damaged fragment is skipped, not fatal. The whole point of a
+            // K-of-N split is that losing some is survivable — aborting the
+            // load here would make one corrupt file byte destroy a file that
+            // still has more than `threshold` healthy fragments left.
+            // Callers get however many are readable; `reconstruct_file`
+            // already refuses clearly if that's fewer than the threshold, and
+            // `check_vault_file_integrity` is what reports *which* are bad.
+            let data = match self.read_encrypted(&path) {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!(
+                        "SecureVault: skipping unreadable fragment {}: {e}",
+                        path.display()
+                    );
+                    continue;
+                }
+            };
+            let frag: Fragment = match serde_json::from_slice(&data) {
+                Ok(f) => f,
+                Err(e) => {
+                    eprintln!(
+                        "SecureVault: skipping malformed fragment {}: {e}",
+                        path.display()
+                    );
+                    continue;
+                }
+            };
             fragments.push(frag);
         }
 
@@ -422,6 +447,43 @@ mod tests {
         // a limit at or above the total just returns everything
         let all = storage.load_fragments_limited(&file_id, 100).unwrap();
         assert_eq!(all.len(), 5);
+    }
+
+    #[test]
+    fn a_corrupt_fragment_is_skipped_rather_than_failing_the_whole_load() {
+        // The K-of-N promise: with 5 fragments and a threshold of 3, one
+        // damaged fragment must still leave the file fully recoverable —
+        // downloadable, rotatable, shareable. Before this was handled, a
+        // single bad byte made all four of those operations fail outright.
+        let (storage, _dir) = temp_storage();
+        let params = SplitParams {
+            total_fragments: 5, threshold: 3, password: None, compress: false,
+            cipher: "aes256gcm".to_string(), kdf: "standard".to_string(), padding_pct: 0,
+        };
+        let data = b"survives a damaged fragment".to_vec();
+        let frags = fragmenter::split_file(&data, "c.txt", &params).unwrap();
+        let file_id = frags[0].file_id.clone();
+        storage.store_fragments(&file_id, &frags).unwrap();
+
+        // Flip a byte in the middle of one stored fragment, the way real
+        // disk corruption (or a user experimenting) would.
+        let victim = storage.frag_dir(&file_id).join("fragment_1.svf.enc");
+        let mut bytes = std::fs::read(&victim).unwrap();
+        let mid = bytes.len() / 2;
+        bytes[mid] ^= 0xFF;
+        std::fs::write(&victim, &bytes).unwrap();
+
+        // The damaged one is dropped; the other four still load.
+        let loaded = storage.load_fragments(&file_id).unwrap();
+        assert_eq!(loaded.len(), 4, "only the corrupt fragment should be skipped");
+        assert!(!loaded.iter().any(|f| f.index == 1), "the corrupt one must not appear");
+
+        // And 4 healthy fragments still rebuild the file exactly.
+        assert_eq!(fragmenter::reconstruct_file(&loaded, None).unwrap(), data);
+
+        // The integrity checker is still what reports the damage.
+        assert!(!storage.check_fragment_intact(&file_id, 1));
+        assert!(storage.check_fragment_intact(&file_id, 2));
     }
 
     #[test]

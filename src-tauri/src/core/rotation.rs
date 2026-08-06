@@ -212,6 +212,68 @@ mod tests {
     }
 
     #[test]
+    fn rotating_past_a_corrupt_fragment_repairs_the_set() {
+        // The scenario that exposed the bug: a fragment gets damaged, and
+        // rotating is exactly what you'd reach for to get a clean set back.
+        // It used to fail with "wrong password or corrupted data", because
+        // loading aborted on the bad fragment instead of skipping it —
+        // leaving the file stuck in a damaged state with no way out.
+        let storage = make_storage("corrupt");
+        let params = SplitParams {
+            total_fragments: 5,
+            threshold: 3,
+            password: Some("hunter2".to_string()),
+            compress: false,
+            cipher: "aes256gcm".to_string(),
+            kdf: "standard".to_string(),
+            padding_pct: 0,
+        };
+        let data = b"rotation should heal this".to_vec();
+        let frags = fragmenter::split_file(&data, "damaged.txt", &params).unwrap();
+        let file_id = frags[0].file_id.clone();
+        storage.store_fragments(&file_id, &frags).unwrap();
+
+        // Damage one fragment on disk.
+        let victim = storage.frag_dir(&file_id).join("fragment_2.svf.enc");
+        let mut bytes = std::fs::read(&victim).unwrap();
+        let mid = bytes.len() / 2;
+        bytes[mid] ^= 0xFF;
+        std::fs::write(&victim, &bytes).unwrap();
+        assert!(!storage.check_fragment_intact(&file_id, 2), "setup: should be damaged");
+
+        let entry = VaultEntry {
+            file_id: file_id.clone(),
+            filename: "damaged.txt".to_string(),
+            size: data.len() as u64,
+            total_fragments: 5,
+            threshold: 3,
+            password_protected: true,
+            created_at: 1000,
+            is_large: false,
+            fragment_labels: Default::default(),
+            pinned: false,
+            last_rotated_at: 1000,
+        };
+
+        // Rotation now succeeds despite the damage.
+        let updated = rotate(&storage, &entry, Some("hunter2")).unwrap();
+        assert!(updated.last_rotated_at > 1000);
+
+        // And it *heals*: a full set of 5, every one of them intact.
+        let fresh = storage.load_fragments(&file_id).unwrap();
+        assert_eq!(fresh.len(), 5, "should end up with a complete healthy set");
+        for i in 1..=5u8 {
+            assert!(storage.check_fragment_intact(&file_id, i), "fragment {i} still damaged");
+        }
+
+        // The file itself is unchanged.
+        assert_eq!(
+            fragmenter::reconstruct_file(&fresh[0..3], Some("hunter2")).unwrap(),
+            data
+        );
+    }
+
+    #[test]
     fn rotation_round_trips_a_large_file() {
         let storage = make_storage("large");
         let big_path = std::env::temp_dir().join(format!("svtest_rotation_big_{}", uuid::Uuid::new_v4()));
