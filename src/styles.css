@@ -1050,7 +1050,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    /* Must sit above .intro-screen (1000), which #lockScreen reuses and which
+       paints an opaque background. The recovery flow opens a modal while the
+       lock screen is still up ("Forgot your PIN?"), so anything lower is
+       invisible and unclickable. */
+    z-index: 1100;
     animation: fadeIn 0.2s ease;
   }
   .modal {
@@ -1131,7 +1135,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    z-index: 200;
+    /* Top of the stack: toasts report the outcome of modal actions, and the
+       recovery flow toasts while the lock screen (1000) is still showing. */
+    z-index: 1200;
   }
   .toast {
     font-family: var(--mono);
