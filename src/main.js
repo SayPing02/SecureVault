@@ -700,7 +700,7 @@ function renderVaultList() {
       ? `<span class="pinned-badge">PINNED</span>` : "";
     const rotatedAt = file.lastRotatedAt || file.createdAt;
     const isStale = (Date.now() / 1000 - rotatedAt) > ROTATION_STALE_DAYS * 86400;
-    const staleBadge = isStale ? `<span class="stale-badge">ROTATE?</span>` : "";
+    const staleBadge = isStale ? `<span class="stale-badge">REPAIR?</span>` : "";
     const ext = (file.filename.split(".").pop() || "file").slice(0, 4).toUpperCase();
     const labelCount = Object.keys(file.fragmentLabels || {}).length;
     const labelsBtnText = labelCount > 0 ? `Labels (${labelCount})` : "Labels";
@@ -715,7 +715,7 @@ function renderVaultList() {
         <div class="vault-item-meta">
           ${fmtBytes(file.size)} · ${file.totalFragments} fragments ·
           threshold ${file.threshold} · Created ${fmtDate(file.createdAt)} ·
-          Rotated ${fmtRotationAge(rotatedAt)}
+          Repaired ${fmtRotationAge(rotatedAt)}
         </div>
         <div class="vault-item-progress hidden" data-role="progress">
           <div class="progress-wrap">
@@ -740,7 +740,7 @@ function renderVaultList() {
             <button class="item-menu-option" data-action="download">Download</button>
             <button class="item-menu-option" data-action="share">Share</button>
             <button class="item-menu-option" data-action="labels">${labelsBtnText}</button>
-            <button class="item-menu-option" data-action="rotate">Rotate Fragments</button>
+            <button class="item-menu-option" data-action="rotate">Repairing Fragments</button>
             <button class="item-menu-option danger" data-action="delete">Delete</button>
           </div>
         </div>
@@ -941,7 +941,7 @@ async function shareFile(file, item) {
 
 async function rotateFile(file) {
   if (!window.confirm(
-    `Rotate "${file.filename}"? This creates a brand-new set of fragments — ` +
+    `Repair "${file.filename}"? This creates a brand-new set of fragments — ` +
     `any old fragments still out there (USB drives, shared copies, etc.) will stop working immediately.`
   )) return;
 
@@ -949,17 +949,17 @@ async function rotateFile(file) {
     if (file.passwordProtected) {
       const confirmed = await askPassword(
         "Confirm Password",
-        `Enter the password for "${file.filename}" to rotate its fragments.`,
+        `Enter the password for "${file.filename}" to repair its fragments.`,
         (pw) => invoke("rotate_vault_file", { fileId: file.fileId, password: pw }).then(() => true)
       );
       if (confirmed === null) return;
     } else {
       await invoke("rotate_vault_file", { fileId: file.fileId, password: null });
     }
-    toast(`"${file.filename}" rotated — old fragments are now invalid`, "ok");
+    toast(`"${file.filename}" repaired — old fragments are now invalid`, "ok");
     refreshVault();
   } catch (err) {
-    toast("Rotation failed: " + err, "err");
+    toast("Repair failed: " + err, "err");
   }
 }
 
