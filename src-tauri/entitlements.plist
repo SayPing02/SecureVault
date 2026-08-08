@@ -2,10 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>keychain-access-groups</key>
-	<array>
-		<string>$(AppIdentifierPrefix)com.securevault.app</string>
-	</array>
+	<!-- No keychain-access-groups entry on purpose.
+	     That entitlement is only for *sharing* keychain items between apps
+	     of the same team; an app reaching its own items needs nothing. It is
+	     also a restricted entitlement, so under an Apple Development
+	     signature it must be authorised by an embedded provisioning profile
+	     — which Tauri does not produce. Claiming it unauthorised made AMFI
+	     SIGKILL the app at launch ("SecureVault can't be opened", exit 137).
+	     The `$(AppIdentifierPrefix)` placeholder was never expanded either,
+	     since that is an Xcode build variable Tauri's codesign step doesn't
+	     substitute. -->
+
 	<!-- Required for the WKWebView to run under hardened runtime with an
 	     Apple Development (non-notarized) signature — without these the
 	     app fails to launch at all (RBSRequestErrorDomain / launchd spawn

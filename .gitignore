@@ -20,7 +20,7 @@ Thumbs.db
 .vs/
 
 # --- Claude Code local session files (not shared project config) ---
-.claude/settings.local.json
-.claude/scheduled_tasks.lock
+.claude/
 
 # NOTE: Cargo.lock IS committed (see README) so builds are reproducible.
+.github/workflows/ci.yml

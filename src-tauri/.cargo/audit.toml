@@ -1,0 +1,22 @@
+# cargo-audit configuration.
+#
+# Advisories listed here are ones we have assessed and cannot act on from
+# this repository. They are ignored so CI stays meaningful — a permanently
+# failing audit gets tuned out, and then a genuinely new advisory slips by
+# unnoticed. Each entry needs a reason, and should be re-checked whenever
+# Tauri is upgraded.
+
+[advisories]
+ignore = [
+    # quick-xml: memory-exhaustion DoS (RUSTSEC-2026-0195) and quadratic
+    # attribute parsing (RUSTSEC-2026-0194), both 7.5 high.
+    #
+    # Reached only via plist -> tauri. plist 1.9.0 pins quick-xml ^0.39.2
+    # while the fix requires >=0.41.0, so this cannot be resolved here until
+    # plist — and then Tauri — upgrade. SecureVault never parses untrusted
+    # XML: the only plists in play are the app's own bundle metadata, so
+    # there is no path for an attacker-controlled document to reach the
+    # vulnerable parser.
+    "RUSTSEC-2026-0195",
+    "RUSTSEC-2026-0194",
+]
