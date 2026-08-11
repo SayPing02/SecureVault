@@ -430,6 +430,12 @@
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
     margin-top: 16px;
+    /* The grid holds one card per fragment, so a high N makes it taller than
+       the viewport. Scroll it here rather than letting the modal grow — a
+       centred fixed overlay pushes overflow above y=0, where it is
+       unreachable. min-height:0 lets it shrink inside the flex column. */
+    overflow-y: auto;
+    min-height: 0;
   }
 
   .fragment-card {
@@ -1066,7 +1072,15 @@
     max-width: 420px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
   }
-  .modal.modal-wide { max-width: 480px; }
+  /* The two fragment-list modals can hold arbitrarily many rows, so cap them
+     to the viewport and let the inner list (.fragments-grid / .labels-list)
+     do the scrolling. Title and actions stay pinned. */
+  .modal.modal-wide {
+    max-width: 480px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
 
   .labels-list {
     display: flex;
